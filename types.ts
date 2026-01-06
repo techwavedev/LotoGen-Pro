@@ -14,6 +14,7 @@ export interface LotteryDefinition {
   visualCols?: number; // Colunas VISUAIS (para o layout do app, geralmente 5 em mobile)
   color: string; // Hex color for UI
   colorName: string; // Tailwind color name approx
+  downloadParam: string; // Parameter for asloterias.com.br download (l=XX)
 }
 
 export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
@@ -26,7 +27,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     cols: 5,
     visualCols: 5,
     color: '#930089',
-    colorName: 'purple'
+    colorName: 'purple',
+    downloadParam: 'lf'
   },
   megasena: {
     id: 'megasena',
@@ -37,7 +39,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     cols: 10, // Filtros consideram linhas de 01-10
     visualCols: 5, // App mostra linhas de 01-05 (conforme print)
     color: '#209869',
-    colorName: 'green'
+    colorName: 'green',
+    downloadParam: 'ms'
   },
   quina: {
     id: 'quina',
@@ -48,7 +51,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     cols: 10,
     visualCols: 5,
     color: '#264987',
-    colorName: 'blue'
+    colorName: 'blue',
+    downloadParam: 'qi'
   },
   lotomania: {
     id: 'lotomania',
@@ -59,9 +63,11 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     cols: 10,
     visualCols: 5,
     color: '#F78100',
-    colorName: 'orange'
+    colorName: 'orange',
+    downloadParam: 'lm'
   }
 };
+
 
 export interface GenerationStats {
   totalAttempts: number;

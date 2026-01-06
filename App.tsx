@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot } from 'lucide-react';
+import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload } from 'lucide-react';
 import { Game, DEFAULT_CONFIG, FilterConfig, HistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId } from './types';
 import { parseHistoryFile, generateGames, analyzeHistory } from './services/lotteryService';
 import GameTicket from './components/GameTicket';
@@ -24,6 +24,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const downloadFormRef = useRef<HTMLFormElement>(null);
 
   // Reset state when lottery changes
   useEffect(() => {
@@ -42,6 +43,17 @@ function App() {
 
   const handleLotteryChange = (id: LotteryId) => {
     setCurrentLotteryId(id);
+  };
+
+  // Download history from asloterias.com.br via hidden form POST
+  const handleDownloadHistory = () => {
+    if (downloadFormRef.current) {
+      const input = downloadFormRef.current.querySelector('input[name="l"]') as HTMLInputElement;
+      if (input) {
+        input.value = lottery.downloadParam;
+      }
+      downloadFormRef.current.submit();
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -197,6 +209,13 @@ function App() {
                       </div>
                     </div>
                  </div>
+                 <button 
+                   onClick={handleDownloadHistory}
+                   className="p-3 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-colors"
+                   title={`Baixar resultados da ${lottery.name}`}
+                 >
+                   <CloudDownload className="w-5 h-5" />
+                 </button>
                  {history.length > 0 && (
                    <button 
                     onClick={() => {
@@ -211,6 +230,18 @@ function App() {
                    </button>
                  )}
               </div>
+              {/* Hidden form for downloading results from asloterias.com.br */}
+              <form 
+                ref={downloadFormRef}
+                action="https://asloterias.com.br/download_excel.php" 
+                method="POST" 
+                target="_blank"
+                className="hidden"
+              >
+                <input type="hidden" name="l" value={lottery.downloadParam} />
+                <input type="hidden" name="t" value="t" />
+                <input type="hidden" name="o" value="s" />
+              </form>
             </div>
 
             <div className="w-full md:w-auto flex flex-col items-stretch md:items-end">
