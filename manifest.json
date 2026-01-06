@@ -1,0 +1,21 @@
+{
+  "name": "LotoGen Pro",
+  "short_name": "LotoGen",
+  "description": "Gerador Profissional para Lotofácil",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#930089",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/vite.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
