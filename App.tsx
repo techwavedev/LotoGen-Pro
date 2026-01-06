@@ -152,6 +152,16 @@ function App() {
         } else {
           setError(null);
         }
+
+        // Send games to backend for tracking (async, non-blocking)
+        const apiUrl = import.meta.env.VITE_API_URL;
+        if (apiUrl && games.length > 0) {
+          fetch(`${apiUrl}/api/games`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lotteryType: lottery.id, numbers: games })
+          }).catch(() => {}); // Silently fail - tracking is not critical
+        }
       } catch (e) {
         setError('Erro na geração.');
       } finally {
