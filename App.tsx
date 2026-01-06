@@ -45,14 +45,62 @@ function App() {
     setCurrentLotteryId(id);
   };
 
-  // Download history from asloterias.com.br via hidden form POST
-  const handleDownloadHistory = () => {
-    if (downloadFormRef.current) {
-      const input = downloadFormRef.current.querySelector('input[name="l"]') as HTMLInputElement;
-      if (input) {
-        input.value = lottery.downloadParam;
+  // Auto-fetch and load history from asloterias.com.br
+  const handleDownloadHistory = async () => {
+    setIsLoading(true);
+    setError(null);
+    setLoadingMessage(`Buscando resultados da ${lottery.name}...`);
+
+    try {
+      // Try to fetch via a CORS proxy or direct request
+      const formData = new URLSearchParams();
+      formData.append('l', lottery.downloadParam);
+      formData.append('t', 't');
+      formData.append('o', 's');
+
+      const response = await fetch('https://asloterias.com.br/download_excel.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao buscar resultados');
       }
-      downloadFormRef.current.submit();
+
+      const blob = await response.blob();
+      const file = new File([blob], `${lottery.name}.xlsx`, { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+
+      setLoadingMessage(`Analisando histórico da ${lottery.name}...`);
+      
+      const data = await parseHistoryFile(file, lottery);
+      if (data.length === 0) {
+        throw new Error(`Nenhum jogo válido encontrado.`);
+      }
+      setHistory(data);
+      
+      const stats = analyzeHistory(data, lottery);
+      setAnalysis(stats);
+      setError(null);
+
+    } catch (err: any) {
+      console.error('Auto-fetch failed:', err);
+      // If CORS blocks, fallback to manual download
+      if (err.message.includes('fetch') || err.message.includes('CORS') || err.name === 'TypeError') {
+        setError('Auto-carregamento bloqueado (CORS). Clique novamente para baixar manualmente.');
+        // Fallback: open form in new tab
+        if (downloadFormRef.current) {
+          downloadFormRef.current.submit();
+        }
+      } else {
+        setError('Erro: ' + (err.message || 'Falha ao carregar resultados'));
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
