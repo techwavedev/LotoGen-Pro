@@ -277,16 +277,26 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               !config.useHotColdFilter && "opacity-50 pointer-events-none"
             )}
           >
-            <p className="text-sm text-gray-600 sm:col-span-2">
-              Define quantos números do grupo dos "Top 12 mais sorteados" devem
-              aparecer em cada jogo gerado.
-              <br />
-              <span className="text-xs text-gray-500">
-                Recomendado para {lottery.name}: entre{" "}
-                {Math.max(0, Math.floor(lottery.gameSize * 0.4))} e{" "}
-                {Math.floor(lottery.gameSize * 0.7)}.
-              </span>
-            </p>
+            {config.useHotColdFilter ? (
+              <p className="text-sm text-gray-600 sm:col-span-2">
+                ✅ <strong>Filtro ativo:</strong> Define quantos números do grupo dos "Top 40% mais sorteados" devem
+                aparecer em cada jogo gerado.
+                <br />
+                <span className="text-xs text-gray-500">
+                  Recomendado para {lottery.name}: entre{" "}
+                  {Math.max(0, Math.floor(lottery.gameSize * 0.4))} e{" "}
+                  {Math.floor(lottery.gameSize * 0.7)}.
+                </span>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500 sm:col-span-2">
+                ⚪ <strong>Filtro desativado:</strong> Números são gerados de forma aleatória, sem considerar estatísticas de frequência.
+                <br />
+                <span className="text-xs text-gray-400">
+                  Ative para forçar um equilíbrio entre números "quentes" e "frios".
+                </span>
+              </p>
+            )}
 
             <div className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
               <span className="text-sm font-medium text-gray-700 whitespace-nowrap">
