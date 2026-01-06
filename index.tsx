@@ -2,9 +2,16 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
-// Initialize Google Analytics 4 dynamically from environment variable
+// Google Analytics 4 initialization function (called after consent)
 const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
-if (GA_MEASUREMENT_ID) {
+
+export function initializeGA() {
+  if (!GA_MEASUREMENT_ID) return;
+  
+  // Don't re-initialize if already loaded
+  if ((window as any).gaInitialized) return;
+  (window as any).gaInitialized = true;
+
   // Load gtag.js script
   const script = document.createElement('script');
   script.async = true;
@@ -18,6 +25,11 @@ if (GA_MEASUREMENT_ID) {
   }
   gtag('js', new Date());
   gtag('config', GA_MEASUREMENT_ID);
+}
+
+// Auto-initialize GA if user already consented
+if (localStorage.getItem('cookie-consent') === 'accepted') {
+  initializeGA();
 }
 
 const rootElement = document.getElementById('root');

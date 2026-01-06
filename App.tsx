@@ -6,6 +6,8 @@ import GameTicket from './components/GameTicket';
 import SettingsPanel from './components/SettingsPanel';
 import StatisticsPanel from './components/StatisticsPanel';
 import FilterExamplesModal from './components/FilterExamplesModal';
+import CookieConsent from './components/CookieConsent';
+import { initializeGA } from './index';
 import clsx from 'clsx';
 import { utils, writeFile } from 'xlsx';
 
@@ -176,6 +178,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900 selection:bg-gray-200">
       <FilterExamplesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <CookieConsent onAccept={initializeGA} />
 
       {/* Hero / Header Section */}
       <header 
