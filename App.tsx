@@ -24,16 +24,20 @@ function App() {
   const [gamesCount, setGamesCount] = useState<number>(5);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [latestResult, setLatestResult] = useState<{ draw_number: number; numbers: string[]; draw_date: string } | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const downloadFormRef = useRef<HTMLFormElement>(null);
+  const apiUrl = import.meta.env.VITE_API_URL;
 
-  // Reset state when lottery changes
+  // Reset state and fetch latest result when lottery changes
   useEffect(() => {
     setHistory([]);
     setAnalysis(null);
     setGeneratedGames([]);
     setError(null);
+    setLatestResult(null);
+    
     // Adjust hot number defaults based on lottery size
     const idealHot = Math.floor(lottery.gameSize * 0.6); // Rule of thumb
     setConfig(prev => ({
@@ -41,7 +45,23 @@ function App() {
         minHotNumbers: Math.max(0, idealHot - 2),
         maxHotNumbers: idealHot + 2
     }));
-  }, [currentLotteryId, lottery.gameSize]);
+
+    // Auto-fetch latest result from API
+    if (apiUrl) {
+      fetch(`${apiUrl}/api/lottery/${currentLotteryId}/latest`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.numbers) {
+            setLatestResult({
+              draw_number: data.draw_number,
+              numbers: data.numbers,
+              draw_date: data.draw_date
+            });
+          }
+        })
+        .catch(() => {}); // Silently fail - not critical
+    }
+  }, [currentLotteryId, lottery.gameSize, apiUrl]);
 
   const handleLotteryChange = (id: LotteryId) => {
     setCurrentLotteryId(id);
@@ -234,6 +254,36 @@ function App() {
 
       <main className="max-w-5xl mx-auto px-4 -mt-8">
         
+        {/* Latest Result Card */}
+        {latestResult && (
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4 mb-4 animate-slide-up">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg" style={{ backgroundColor: lottery.color + '20' }}>
+                  <Dna className="w-5 h-5" style={{ color: lottery.color }} />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Último Resultado - Concurso {latestResult.draw_number}
+                    {latestResult.draw_date && <span className="ml-2 text-xs">({latestResult.draw_date})</span>}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {latestResult.numbers.map((num, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center justify-center w-8 h-8 text-sm font-bold rounded-full text-white"
+                        style={{ backgroundColor: lottery.color }}
+                      >
+                        {String(num).padStart(2, '0')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Main Control Card */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-6 mb-8 animate-slide-up">
           
