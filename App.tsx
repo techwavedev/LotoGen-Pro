@@ -30,7 +30,7 @@ function App() {
   const downloadFormRef = useRef<HTMLFormElement>(null);
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  // Reset state and fetch latest result when lottery changes
+  // Reset state and fetch latest result + full history when lottery changes
   useEffect(() => {
     setHistory([]);
     setAnalysis(null);
@@ -46,8 +46,9 @@ function App() {
         maxHotNumbers: idealHot + 2
     }));
 
-    // Auto-fetch latest result from API
+    // Auto-fetch from API if available
     if (apiUrl) {
+      // Fetch latest result
       fetch(`${apiUrl}/api/lottery/${currentLotteryId}/latest`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
@@ -59,9 +60,30 @@ function App() {
             });
           }
         })
-        .catch(() => {}); // Silently fail - not critical
+        .catch(() => {});
+
+      // Fetch full history for analysis
+      setIsLoading(true);
+      setLoadingMessage(`Carregando histórico da ${lottery.name}...`);
+      
+      fetch(`${apiUrl}/api/lottery/${currentLotteryId}/history`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.games && data.games.length > 0) {
+            setHistory(data.games);
+            // Run analysis
+            const stats = analyzeHistory(data.games, lottery);
+            setAnalysis(stats);
+          }
+        })
+        .catch(() => {
+          setError('Falha ao carregar histórico. Tente o upload manual.');
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
-  }, [currentLotteryId, lottery.gameSize, apiUrl]);
+  }, [currentLotteryId, lottery.gameSize, apiUrl, lottery]);
 
   const handleLotteryChange = (id: LotteryId) => {
     setCurrentLotteryId(id);
