@@ -25,10 +25,43 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [latestResult, setLatestResult] = useState<{ draw_number: number; numbers: string[]; draw_date: string } | null>(null);
+  const [winnersCount, setWinnersCount] = useState<number>(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const downloadFormRef = useRef<HTMLFormElement>(null);
   const apiUrl = import.meta.env.VITE_API_URL;
+
+  // Fetch winners count on mount
+  useEffect(() => {
+    if (apiUrl) {
+      fetch(`${apiUrl}/api/stats/winners`)
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data && data.totalWinners) {
+            setWinnersCount(data.totalWinners);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [apiUrl]);
+
+  // Helper: Check if history cache is valid
+  const isHistoryCacheValid = (cacheDate: string) => {
+    const cached = new Date(cacheDate);
+    const now = new Date();
+    
+    // If it's the same day and before 17:00, cache is valid
+    if (cached.toDateString() === now.toDateString()) {
+      return now.getHours() < 17;
+    }
+    // If it's yesterday after 17:00 and now is before 17:00 today, cache is valid
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (cached.toDateString() === yesterday.toDateString() && now.getHours() < 17) {
+      return true;
+    }
+    return false;
+  };
 
   // Reset state and fetch latest result + full history when lottery changes
   useEffect(() => {
@@ -62,22 +95,38 @@ function App() {
         })
         .catch(() => {});
 
-      // Fetch full history for analysis
-      setIsLoading(true);
-      setLoadingMessage(`Carregando histórico da ${lottery.name}...`);
+      // Check cache first
+      const cacheKey = `history_${currentLotteryId}`;
+      const cachedData = localStorage.getItem(cacheKey);
+      const cachedDateKey = `history_${currentLotteryId}_date`;
+      const cachedDate = localStorage.getItem(cachedDateKey);
       
-      fetch(`${apiUrl}/api/lottery/${currentLotteryId}/history`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data && data.games && data.games.length > 0) {
-            setHistory(data.games);
-            // Run analysis
-            const stats = analyzeHistory(data.games, lottery);
-            setAnalysis(stats);
-          }
-        })
-        .catch(() => {
-          setError('Falha ao carregar histórico. Tente o upload manual.');
+      if (cachedData && cachedDate && isHistoryCacheValid(cachedDate)) {
+        // Use cached data
+        const games = JSON.parse(cachedData);
+        setHistory(games);
+        const stats = analyzeHistory(games, lottery);
+        setAnalysis(stats);
+      } else {
+        // Fetch full history for analysis
+        setIsLoading(true);
+        setLoadingMessage(`Carregando histórico da ${lottery.name}...`);
+        
+        fetch(`${apiUrl}/api/lottery/${currentLotteryId}/history`)
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data && data.games && data.games.length > 0) {
+              setHistory(data.games);
+              // Run analysis
+              const stats = analyzeHistory(data.games, lottery);
+              setAnalysis(stats);
+              // Cache the data
+              localStorage.setItem(cacheKey, JSON.stringify(data.games));
+              localStorage.setItem(cachedDateKey, new Date().toISOString());
+            }
+          })
+          .catch(() => {
+            setError('Falha ao carregar histórico. Tente o upload manual.');
         })
         .finally(() => {
           setIsLoading(false);
@@ -249,6 +298,14 @@ function App() {
               <p className="text-white/80 text-sm md:text-base font-medium max-w-md">
                 Algoritmos avançados para geração de jogos da {lottery.name} baseados em padrões históricos e matemáticos.
               </p>
+              {winnersCount > 0 && (
+                <div className="mt-3 inline-flex items-center gap-2 bg-green-500/20 border border-green-400/30 text-green-100 px-4 py-2 rounded-lg backdrop-blur-sm">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-sm font-semibold">
+                    Já geramos {winnersCount.toLocaleString()} combinações vencedoras desde 2026!
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Lottery Selector Tabs */}
