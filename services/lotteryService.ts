@@ -496,18 +496,92 @@ export const analyzeQuadrants = (history: Game[], lottery: LotteryDefinition): Q
   return { groups };
 };
 
+// 8. HELPERS FOR MANDEL STATS
+const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
+  let totalPrimes = 0;
+  let totalEdges = 0;
+  let totalSpread = 0;
+  let totalDecades = 0;
+
+  history.forEach(game => {
+    // Primes
+    totalPrimes += game.filter(n => PRIMES_SET.has(n)).length;
+    
+    // Edges (Numbers 1-cols, multiples of cols, multiples of cols + 1, last numbers)
+    // Simply: if column is 1 or cols OR row is 1 or maxRow
+    // Easier heuristic: explicitly check against edges
+    // For now, simpler heuristic: outer bound numbers
+    // Let's rely on standard edge definition: 
+    // Top Row, Bottom Row, First Col, Last Col
+    const { totalNumbers, cols } = lottery;
+    const numRows = Math.ceil(totalNumbers / cols);
+    const edges = game.filter(n => {
+       const row = Math.ceil(n / cols); // 1-based
+       const col = (n - 1) % cols + 1;  // 1-based
+       return row === 1 || row === numRows || col === 1 || col === cols;
+    }).length;
+    totalEdges += edges;
+
+    // Spread (Max - Min) or Avg Dist?
+    // Using Avg Distance
+    let spreadSum = 0;
+    for(let i=0; i<game.length-1; i++) {
+        spreadSum += (game[i+1] - game[i]);
+    }
+    const avgDist = spreadSum / (game.length - 1);
+    totalSpread += avgDist;
+
+    // Decades (Colunas 0-9 usually? Or Groups of 10?)
+    // Usually "Decades" in Brazil means 01-10, 11-20...
+    const decades = new Set(game.map(n => Math.floor((n-1)/10)));
+    totalDecades += decades.size;
+  });
+
+  const avgPrimes = totalPrimes / history.length;
+  const avgEdges = totalEdges / history.length;
+  const avgSpread = totalSpread / history.length;
+  const avgDecades = totalDecades / history.length;
+
+  return {
+    primeDistributionStats: {
+        avgPrimesPerGame: avgPrimes,
+        recommendedRange: [Math.floor(avgPrimes * 0.8), Math.ceil(avgPrimes * 1.2)] as [number, number]
+    },
+    decadeDistributionStats: {
+        avgDecadesCovered: avgDecades
+    },
+    edgeNumberStats: {
+        avgEdgesPerGame: avgEdges,
+        recommendedRange: [Math.floor(avgEdges * 0.8), Math.ceil(avgEdges * 1.2)] as [number, number]
+    },
+    spreadStats: {
+        avgSpread: avgSpread,
+        recommendedMinSpread: Math.floor(avgSpread * 0.7)
+    }
+  };
+};
+
 // 7. EXTENDED HISTORY ANALYSIS - Combina todas as análises
 export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefinition): ExtendedHistoryAnalysis => {
   const baseAnalysis = analyzeHistory(history, lottery);
-  
+  const mandelStats = calculateMandelStats(history, lottery);
+  const sumStats = analyzeSumRange(history);
+
   return {
     ...baseAnalysis,
     delayStats: analyzeDelays(history, lottery),
-    sumRangeStats: analyzeSumRange(history),
+    sumRangeStats: sumStats,
     consecutiveStats: analyzeConsecutives(history),
     trendStats: analyzeTrends(history, lottery),
     repeatBetweenDrawsStats: analyzeRepeats(history),
-    quadrantStats: analyzeQuadrants(history, lottery)
+    quadrantStats: analyzeQuadrants(history, lottery),
+    
+    // Inject Mandel Stats
+    primeDistributionStats: mandelStats.primeDistributionStats,
+    decadeDistributionStats: mandelStats.decadeDistributionStats,
+    edgeNumberStats: mandelStats.edgeNumberStats,
+    spreadStats: mandelStats.spreadStats,
+    sumStats: { averageSum: sumStats.average }
   };
 };
 
