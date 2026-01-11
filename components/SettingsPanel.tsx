@@ -93,49 +93,80 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     }
     
     // Use actual historical analysis data
-    const primeRec = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
-    const edgeRec = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
-    const decadeAvg = extendedAnalysis.decadeDistributionStats?.avgDecadesCovered || staticRec.decades.min;
-    const spreadAvg = extendedAnalysis.spreadStats?.recommendedMinSpread || staticRec.spread.min;
-    const fibRec = extendedAnalysis.fibonacciStats?.recommendedRange || [staticRec.fibonacci.min, staticRec.fibonacci.min + 2];
+    // CRITICAL: Scale stats if gameSize > drawSize (e.g. Lotomania)
+    const scaleRatio = lottery.gameSize / (lottery.drawSize || lottery.gameSize);
     
+    // Primes
+    const hPrimes = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
+    const primeMin = Math.floor(hPrimes[0] * scaleRatio);
+    const primeMax = Math.ceil(hPrimes[1] * scaleRatio);
+
+    // Edges
+    const hEdges = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
+    const edgeMin = Math.floor(hEdges[0] * scaleRatio);
+    const edgeMax = Math.ceil(hEdges[1] * scaleRatio);
+
+    // Decades (Coverage tends to saturate, so don't scale linearly beyond total decades)
+    const hDecadeAvg = extendedAnalysis.decadeDistributionStats?.avgDecadesCovered || staticRec.decades.min;
+    // For Lotomania (50 picks), you almost always pick more decades than history (20 picks).
+    // If history covers 8 decades (avg), 50 picks likely covers 10.
+    // Heuristic: if scale > 1.5, assume near full coverage is safe.
+    const decadeMin = scaleRatio > 1.5 ? Math.min(10, Math.floor(hDecadeAvg + 2)) : Math.floor(hDecadeAvg);
+
+    // Spread (Avg distance decreases as you pick more numbers!)
+    // If you pick 2.5x more numbers, the gap between them shrinks by 2.5x.
+    const hSpreadAvg = extendedAnalysis.spreadStats?.recommendedMinSpread || staticRec.spread.min;
+    const spreadMin = Math.max(0.5, hSpreadAvg / scaleRatio);
+
+    // Fibonacci
+    const hFib = extendedAnalysis.fibonacciStats?.recommendedRange || [staticRec.fibonacci.min, staticRec.fibonacci.min + 2];
+    const fibMin = Math.floor(hFib[0] * scaleRatio);
+
     // Stats
-    const sumAvg = extendedAnalysis.sumStats?.averageSum || expectedSum;
-    const sumMin = Math.floor(sumAvg * 0.85);
-    const sumMax = Math.ceil(sumAvg * 1.15);
+    const sumAvgHist = extendedAnalysis.sumStats?.averageSum || expectedSum;
+    const sumAvgScaled = sumAvgHist * scaleRatio;
+    const sumMin = Math.floor(sumAvgScaled * 0.85);
+    const sumMax = Math.ceil(sumAvgScaled * 1.15);
     
-    // Safe consecutive from history: Avg + Tolerance
+    // Consecutive
     const avgConsecutive = extendedAnalysis.consecutiveStats?.avgPairs || 0;
-    // For Lotomania, if avg is 0 (missing data?), fallback to safeConsecutive
-    const histConsecutive = avgConsecutive > 0 ? Math.ceil(avgConsecutive + 4) : safeConsecutive;
+    // Pairs increase roughly linearly or quadratically?
+    // Lotomania: 20 picks has few pairs. 50 picks has MANY.
+    // Let's rely on the safeConsecutive heuristic if scale is large.
+    const histConsecutiveScaled = Math.ceil(avgConsecutive * scaleRatio * scaleRatio); // Pairs scale quadratically approx
+    const finalConsecutive = scaleRatio > 1.5 ? safeConsecutive : (histConsecutiveScaled > 0 ? histConsecutiveScaled + 2 : safeConsecutive);
 
-    // Historical Delay: Use average delay or median delay from analysis
+    // Historical Delay (applies to individual numbers, doesn't scale with game size)
     const avgDelay = extendedAnalysis.delayStats?.[0]?.avgDelay || 8;
-    const safeDelay = Math.floor(avgDelay * 0.8); // Slightly lower than avg for safer filter
+    const safeDelay = Math.floor(avgDelay * 0.8);
 
-    // Historical Repeats: Use average repeats
+    // Historical Repeats (Comparison with previous draw)
+    // If matching against a previous draw of 20, and we have 50 numbers...
+    // Expected intersection is higher.
     const avgRepeats = extendedAnalysis.repeatBetweenDrawsStats?.avgRepeats || 0;
-    const minRep = Math.max(0, Math.floor(avgRepeats - 2));
-    const maxRep = Math.ceil(avgRepeats + 2);
+    const avgRepeatsScaled = avgRepeats * scaleRatio;
+    
+    const minRep = Math.max(0, Math.floor(avgRepeatsScaled - 2));
+    const maxRep = Math.ceil(avgRepeatsScaled + 3);
 
     return {
       hasAnalysis: true,
       sum: [sumMin, sumMax],
-      consecutive: histConsecutive,
+      consecutive: finalConsecutive, // Use calculated safe value
       delay: safeDelay > 2 ? safeDelay : 5, 
       repeat: [minRep, maxRep],
       
-      primes: { min: primeRec[0], max: primeRec[1] },
-      decades: { min: Math.floor(decadeAvg) },
-      edges: { min: edgeRec[0], max: edgeRec[1] },
-      spread: { min: Math.max(0.5, spreadAvg) },
-      fibonacci: { min: fibRec[0] }, // Just min for now as config only has min
+      primes: { min: primeMin, max: primeMax },
+      decades: { min: decadeMin },
+      edges: { min: edgeMin, max: edgeMax },
+      spread: { min: spreadMin },
+      fibonacci: { min: fibMin }, 
       
       hints: {
-        sum: `Histórico: média ${sumAvg.toFixed(0)}`,
-        consecutive: `Histórico: média ${avgConsecutive.toFixed(1)}`,
+        sum: `Histórico (Ajustado): ~${sumAvgScaled.toFixed(0)}`,
+        consecutive: `Padrão: Máx ${finalConsecutive}`,
         delay: `Histórico: média ${avgDelay.toFixed(1)} concursos`,
-        repeat: `Histórico: média ${avgRepeats.toFixed(1)} repetido(s)`
+        repeat: `Histórico (Ajustado): ~${avgRepeatsScaled.toFixed(1)}`
       }
     };
   }, [extendedAnalysis, staticRec, lottery]);

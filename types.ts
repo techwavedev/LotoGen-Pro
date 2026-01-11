@@ -328,10 +328,10 @@ export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {
     fibonacci: { min: 0, available: 10, hint: "0 a 2" }
   },
   lotomania: {
-    primes: { min: 10, max: 15, hint: "10 a 15 primos" },
-    decades: { min: 8, total: 10, hint: "Cubra quase todas décadas" },
-    edges: { min: 12, max: 18, hint: "Borda importante" },
-    spread: { min: 2, hint: "Espalhe" },
-    fibonacci: { min: 4, available: 16, hint: "4 a 8" }
+    primes: { min: 8, max: 18, hint: "Média 12-13 primos (em 50 números)" },
+    decades: { min: 7, total: 10, hint: "Cubra a maioria das décadas" },
+    edges: { min: 12, max: 24, hint: "12 a 24 na borda (Média 18)" },
+    spread: { min: 0.5, hint: "Espalhe" },
+    fibonacci: { min: 2, available: 16, hint: "3 a 8" }
   }
 };
