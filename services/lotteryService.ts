@@ -745,7 +745,7 @@ export const generateGamesExtended = async (
 ): Promise<Game[]> => {
   const result: Game[] = [];
   let attempts = 0;
-  const MAX_ATTEMPTS = count * 8000; // More attempts for stricter filters
+  const MAX_ATTEMPTS = count * 50000; // Increased to allow strict filters
 
   const { lines: LINES, columns: COLUMNS } = getGridStructure(lottery);
   const hotSet = new Set(hotNumbers);

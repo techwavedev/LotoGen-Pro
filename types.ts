@@ -303,11 +303,11 @@ export const DEFAULT_EXTENDED_CONFIG: ExtendedFilterConfig = {
 
 export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {
   lotofacil: {
-    primes: { min: 4, max: 7, hint: "Em média 5 ou 6 primos" },
+    primes: { min: 3, max: 9, hint: "Em média 5 ou 6 primos (3-9 seguro)" },
     decades: { min: 2, total: 2, hint: "Cubra as 5 linhas" },
-    edges: { min: 8, max: 11, hint: "8 a 11 números na borda" },
-    spread: { min: 2, hint: "Evite aglomerados" },
-    fibonacci: { min: 3, available: 5, hint: "3 a 5" }
+    edges: { min: 6, max: 13, hint: "8 a 11 comum (6-13 seguro)" },
+    spread: { min: 1, hint: "Evite aglomerados (min 1)" },
+    fibonacci: { min: 2, available: 5, hint: "3 a 5 (2 min)" }
   },
   megasena: {
     primes: { min: 1, max: 3, hint: "1 a 3 primos" },

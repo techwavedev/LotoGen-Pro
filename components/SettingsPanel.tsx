@@ -59,11 +59,16 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const baseSumMin = Math.floor(lottery.gameSize * 4.5); // approx
     const baseSumMax = Math.ceil(lottery.gameSize * 13.5); // approx
     
+    // Dynamic consecutive default: Lotofacil (15/25) is dense, needs high tolerance.
+    // Mega/Quina are sparse, need low tolerance.
+    const isDenseLottery = lottery.gameSize > 10;
+    const safeConsecutive = isDenseLottery ? (lottery.gameSize - 2) : 3;
+
     if (!extendedAnalysis) {
       return {
         hasAnalysis: false,
         sum: [baseSumMin, baseSumMax],
-        consecutive: 3, // Safe default
+        consecutive: safeConsecutive, 
         delay: 10,
         repeat: [1, 5],
         primes: { min: staticRec.primes.min, max: staticRec.primes.max },
@@ -73,7 +78,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         fibonacci: { min: staticRec.fibonacci.min },
         hints: {
           sum: `Padrão: ${baseSumMin}-${baseSumMax}`,
-          consecutive: "Padrão: Máx 3",
+          consecutive: `Padrão: Máx ${safeConsecutive}`,
           delay: "Padrão: >10 atrasos",
           repeat: "Padrão: 1-5 repetidos"
         }
@@ -91,10 +96,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const sumMin = Math.floor(sumAvg * 0.85);
     const sumMax = Math.ceil(sumAvg * 1.15);
     
+    // Safe consecutive from history: Avg + Tolerance
+    const avgConsecutive = extendedAnalysis.consecutiveStats?.avgPairs || 0;
+    const histConsecutive = Math.ceil(avgConsecutive + 2); // Add buffer
+
     return {
       hasAnalysis: true,
       sum: [sumMin, sumMax],
-      consecutive: 2, // Analysis usually suggests tighter
+      consecutive: histConsecutive > 0 ? histConsecutive : safeConsecutive,
       delay: 8, // Analysis suggests tighter
       repeat: [Math.max(0, Math.floor(lottery.drawSize * 0.4)), Math.ceil(lottery.drawSize * 0.6)],
       
@@ -106,7 +115,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       
       hints: {
         sum: `Histórico: média ${sumAvg.toFixed(0)}`,
-        consecutive: "Histórico: Evita seq. longas",
+        consecutive: `Histórico: média ${avgConsecutive.toFixed(1)}`,
         delay: "Histórico: Baseado em atrasos",
         repeat: "Histórico: Baseado em repetições"
       }
