@@ -105,7 +105,7 @@ function App() {
         // Use cached data
         const games = JSON.parse(cachedData);
         setHistory(games);
-        const stats = analyzeHistory(games, lottery);
+        const stats = analyzeHistoryExtended(games, lottery);
         setAnalysis(stats);
       } else {
         // Fetch full history for analysis
@@ -118,7 +118,7 @@ function App() {
             if (data && data.games && data.games.length > 0) {
               setHistory(data.games);
               // Run analysis
-              const stats = analyzeHistory(data.games, lottery);
+              const stats = analyzeHistoryExtended(data.games, lottery);
               setAnalysis(stats);
               // Cache the data
               localStorage.setItem(cacheKey, JSON.stringify(data.games));
@@ -177,7 +177,7 @@ function App() {
       }
       setHistory(data);
       
-      const stats = analyzeHistory(data, lottery);
+      const stats = analyzeHistoryExtended(data, lottery);
       setAnalysis(stats);
       setError(null);
 
@@ -213,7 +213,7 @@ function App() {
       }
       setHistory(data);
       
-      const stats = analyzeHistory(data, lottery);
+      const stats = analyzeHistoryExtended(data, lottery);
       setAnalysis(stats);
 
     } catch (err: any) {
@@ -236,7 +236,7 @@ function App() {
     setTimeout(async () => {
       try {
         const hotNumbers = analysis ? analysis.hotNumbers : [];
-        const games = await generateGames(targetCount, history, config, lottery, hotNumbers);
+        const games = await generateGamesExtended(targetCount, history, config, lottery, hotNumbers, analysis || undefined);
         
         setGeneratedGames(games);
         if (games.length < targetCount) {
@@ -472,6 +472,7 @@ function App() {
             historyCount={history.length}
             onOpenExamples={() => setIsModalOpen(true)}
             lottery={lottery}
+            extendedAnalysis={analysis}
           />
 
           {/* Action Button */}
