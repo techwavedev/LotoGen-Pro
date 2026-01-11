@@ -333,6 +333,440 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Advanced Statistical Filters */}
+        <div
+            className="space-y-4 p-4 rounded-lg md:col-span-2 lg:col-span-3 border bg-gradient-to-br from-blue-50 to-indigo-50"
+            style={{ borderColor: `${lottery.color}33` }}
+          >
+            <div className="flex items-center justify-between">
+              <h3
+                className="text-sm font-bold uppercase tracking-wider flex items-center gap-2"
+                style={{ color: lottery.color }}
+              >
+                <TrendingUp className="w-4 h-4" />
+                Filtros Estatísticos Avançados (Auto)
+              </h3>
+              
+              <button
+                onClick={() => {
+                  const idealHotMin = Math.max(0, Math.floor(lottery.gameSize * 0.4));
+                  const idealHotMax = Math.ceil(lottery.gameSize * 0.7);
+                  
+                  setConfig(prev => ({
+                    ...prev,
+                    // Hot/Cold
+                    minHotNumbers: idealHotMin,
+                    maxHotNumbers: idealHotMax,
+                    // Sum range
+                    useSumFilter: true,
+                    minSum: statDefaults.sum[0] || prev.minSum,
+                    maxSum: statDefaults.sum[1] || prev.maxSum,
+                    // Consecutive
+                    useConsecutiveFilter: true,
+                    maxConsecutivePairs: statDefaults.consecutive,
+                    // Delay
+                    useDelayFilter: true,
+                    minDelayedNumbers: 2,
+                    delayThreshold: statDefaults.delay,
+                    // Repeat
+                    useRepeatFilter: true,
+                    minRepeatsFromLast: statDefaults.repeat[0],
+                    maxRepeatsFromLast: statDefaults.repeat[1],
+                    // Interleaving & Trend
+                    useInterleavingFilter: true,
+                    useTrendFilter: true,
+                    minTrendingHot: 3,
+                  }));
+                }}
+                className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors bg-blue-500 hover:bg-blue-600 text-white shadow-sm flex items-center gap-1"
+              >
+                ⚡ Aplicar Recomendados
+                {!statDefaults.hasAnalysis && <span className="opacity-70 text-[10px]">(Padrão)</span>}
+              </button>
+            </div>
+            <p className="text-xs text-gray-600 -mt-2">
+              {statDefaults.hasAnalysis
+                ? `📊 Valores calculados de ${extendedAnalysis?.totalGames} concursos carregados.`
+                : `Valores otimizados para ${lottery.name} (Análise pendente).`}
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Sum Filter */}
+              <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useSumFilter || false}
+                    onChange={() => toggle("useSumFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <Hash className="w-4 h-4 text-blue-500" />
+                  <span className="text-sm font-medium text-gray-700">Faixa de Soma</span>
+                </label>
+                <div className={clsx("flex gap-2", !config.useSumFilter && "opacity-50 pointer-events-none")}>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={config.minSum || 0}
+                    onChange={(e) => setNumber("minSum", parseInt(e.target.value) || 0)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={config.maxSum || 999}
+                    onChange={(e) => setNumber("maxSum", parseInt(e.target.value) || 999)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                </div>
+                <div className="text-[10px] text-blue-600 mt-1 flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3" />
+                  {statDefaults.hints.sum}
+                </div>
+              </div>
+
+              {/* Consecutive Filter */}
+              <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useConsecutiveFilter || false}
+                    onChange={() => toggle("useConsecutiveFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">Máx. Consecutivos</span>
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={config.maxConsecutivePairs || 3}
+                  onChange={(e) => setNumber("maxConsecutivePairs", parseInt(e.target.value) || 3)}
+                  className={clsx("w-full text-sm border rounded px-2 py-1", !config.useConsecutiveFilter && "opacity-50")}
+                  disabled={!config.useConsecutiveFilter}
+                />
+                <div className="text-[10px] text-blue-600 mt-1 flex items-center gap-1">
+                   <TrendingUp className="w-3 h-3" />
+                   {statDefaults.hints.consecutive}
+                </div>
+              </div>
+
+              {/* Delay Filter */}
+              <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useDelayFilter || false}
+                    onChange={() => toggle("useDelayFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <Timer className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm font-medium text-gray-700">Números Atrasados</span>
+                </label>
+                <div className={clsx("text-xs text-gray-500", !config.useDelayFilter && "opacity-50")}>
+                  Mín. {config.minDelayedNumbers || 2} números c/ {config.delayThreshold || 10}+ sorteios
+                </div>
+                <div className="text-[10px] text-orange-600 mt-1">
+                  {statDefaults.hints.delay}
+                </div>
+              </div>
+
+              {/* Repeat Filter */}
+              <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useRepeatFilter || false}
+                    onChange={() => toggle("useRepeatFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <Repeat className="w-4 h-4 text-purple-500" />
+                  <span className="text-sm font-medium text-gray-700">Repetições</span>
+                </label>
+                <div className={clsx("flex gap-2", !config.useRepeatFilter && "opacity-50 pointer-events-none")}>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    min="0"
+                    value={config.minRepeatsFromLast || 1}
+                    onChange={(e) => setNumber("minRepeatsFromLast", parseInt(e.target.value) || 0)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    min="0"
+                    value={config.maxRepeatsFromLast || 5}
+                    onChange={(e) => setNumber("maxRepeatsFromLast", parseInt(e.target.value) || 10)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                </div>
+                <div className="text-[10px] text-purple-600 mt-1">
+                   {statDefaults.hints.repeat}
+                </div>
+              </div>
+
+              {/* Interleaving Filter */}
+              <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.useInterleavingFilter || false}
+                    onChange={() => toggle("useInterleavingFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <Scale className="w-4 h-4 text-green-500" />
+                  <span className="text-sm font-medium text-gray-700">Equilíbrio Baixas/Altas</span>
+                </label>
+              </div>
+
+              {/* Trend Filter */}
+              <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useTrendFilter || false}
+                    onChange={() => toggle("useTrendFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <TrendingUp className="w-4 h-4 text-cyan-500" />
+                  <span className="text-sm font-medium text-gray-700">Tendência Alta</span>
+                </label>
+                <div className={clsx("text-xs text-gray-500", !config.useTrendFilter && "opacity-50")}>
+                  Mín. {config.minTrendingHot || 3} números emergentes
+                </div>
+              </div>
+            </div>
+          </div>
+
+        {/* Mandel Strategy Filters */}
+          <div
+            className="space-y-4 p-4 rounded-lg md:col-span-2 lg:col-span-3 border bg-gradient-to-br from-amber-50 to-orange-50"
+            style={{ borderColor: `${lottery.color}33` }}
+          >
+            <div className="flex items-center justify-between">
+              <h3
+                className="text-sm font-bold uppercase tracking-wider flex items-center gap-2"
+                style={{ color: lottery.color }}
+              >
+                🎯 Estratégia Mandel (Avançado)
+              </h3>
+              <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">
+                {extendedAnalysis ? '📊 Baseado no Histórico' : 'Otimizado para ' + lottery.name}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 -mt-2">
+              Filtros baseados nas estratégias de Stefan Mandel, vencedor 14x em loterias mundiais. 
+              <strong className="text-amber-700">
+                {extendedAnalysis 
+                  ? ` Valores calculados dos ${historyCount} concursos carregados.`
+                  : ` Valores recomendados para ${lottery.name}.`}
+              </strong>
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Prime Count Filter */}
+              <div className={clsx(
+                "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                config.usePrimeCountFilter ? "border-amber-400 ring-1 ring-amber-200" : "border-gray-200"
+              )}>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.usePrimeCountFilter || false}
+                    onChange={() => toggle("usePrimeCountFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">🔢 Primos Balanceados</span>
+                  {config.usePrimeCountFilter && <span className="text-xs text-green-600">✓ Ativo</span>}
+                </label>
+                <div className={clsx("flex gap-2", !config.usePrimeCountFilter && "opacity-50 pointer-events-none")}>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    min="0"
+                    value={config.minPrimes ?? statDefaults.primes.min}
+                    onChange={(e) => setNumber("minPrimes", parseInt(e.target.value) || 0)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    min="0"
+                    value={config.maxPrimes ?? statDefaults.primes.max}
+                    onChange={(e) => setNumber("maxPrimes", parseInt(e.target.value) || 10)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                </div>
+                <div className="text-xs text-amber-600 mt-2 bg-amber-50 p-1.5 rounded">
+                  💡 {getHint('primes')}
+                </div>
+              </div>
+
+              {/* Decade Balance Filter */}
+              <div className={clsx(
+                "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                config.useDecadeBalanceFilter ? "border-amber-400 ring-1 ring-amber-200" : "border-gray-200"
+              )}>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useDecadeBalanceFilter || false}
+                    onChange={() => toggle("useDecadeBalanceFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">📊 Cobertura de Dezenas</span>
+                  {config.useDecadeBalanceFilter && <span className="text-xs text-green-600">✓ Ativo</span>}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max={staticRec.decades.total}
+                  value={config.minDecadesRepresented ?? statDefaults.decades.min}
+                  onChange={(e) => setNumber("minDecadesRepresented", parseInt(e.target.value) || 3)}
+                  className={clsx("w-full text-sm border rounded px-2 py-1", !config.useDecadeBalanceFilter && "opacity-50")}
+                  disabled={!config.useDecadeBalanceFilter}
+                />
+                <div className="text-xs text-amber-600 mt-2 bg-amber-50 p-1.5 rounded">
+                  💡 {getHint('decades')}
+                </div>
+              </div>
+
+              {/* Edge Numbers Filter */}
+              <div className={clsx(
+                "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                config.useEdgeFilter ? "border-amber-400 ring-1 ring-amber-200" : "border-gray-200"
+              )}>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useEdgeFilter || false}
+                    onChange={() => toggle("useEdgeFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">↔️ Números de Borda</span>
+                  {config.useEdgeFilter && <span className="text-xs text-green-600">✓ Ativo</span>}
+                </label>
+                <div className={clsx("flex gap-2", !config.useEdgeFilter && "opacity-50 pointer-events-none")}>
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    min="0"
+                    value={config.minEdgeNumbers ?? statDefaults.edges.min}
+                    onChange={(e) => setNumber("minEdgeNumbers", parseInt(e.target.value) || 0)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    min="0"
+                    value={config.maxEdgeNumbers ?? statDefaults.edges.max}
+                    onChange={(e) => setNumber("maxEdgeNumbers", parseInt(e.target.value) || 10)}
+                    className="w-full text-sm border rounded px-2 py-1"
+                  />
+                </div>
+                <div className="text-xs text-amber-600 mt-2 bg-amber-50 p-1.5 rounded">
+                  💡 {getHint('edges')}
+                </div>
+              </div>
+
+              {/* Number Spread Filter */}
+              <div className={clsx(
+                "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                config.useSpreadFilter ? "border-amber-400 ring-1 ring-amber-200" : "border-gray-200"
+              )}>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useSpreadFilter || false}
+                    onChange={() => toggle("useSpreadFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">📏 Dispersão Mínima</span>
+                  {config.useSpreadFilter && <span className="text-xs text-green-600">✓ Ativo</span>}
+                </label>
+                <input
+                  type="number"
+                  min="0.5"
+                  step="0.5"
+                  value={config.minAverageSpread ?? statDefaults.spread.min}
+                  onChange={(e) => setNumber("minAverageSpread", parseFloat(e.target.value) || 2)}
+                  className={clsx("w-full text-sm border rounded px-2 py-1", !config.useSpreadFilter && "opacity-50")}
+                  disabled={!config.useSpreadFilter}
+                />
+                <div className="text-xs text-amber-600 mt-2 bg-amber-50 p-1.5 rounded">
+                  💡 {getHint('spread')}
+                </div>
+              </div>
+
+              {/* Fibonacci Filter */}
+              <div className={clsx(
+                "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                config.useFibonacciFilter ? "border-amber-400 ring-1 ring-amber-200" : "border-gray-200"
+              )}>
+                <label className="flex items-center gap-2 cursor-pointer mb-2">
+                  <input
+                    type="checkbox"
+                    checked={config.useFibonacciFilter || false}
+                    onChange={() => toggle("useFibonacciFilter")}
+                    className="w-4 h-4 rounded"
+                    style={{ accentColor: lottery.color }}
+                  />
+                  <span className="text-sm font-medium text-gray-700">🌀 Fibonacci</span>
+                  {config.useFibonacciFilter && <span className="text-xs text-green-600">✓ Ativo</span>}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={staticRec.fibonacci.available}
+                  value={config.minFibonacciNumbers ?? statDefaults.fibonacci.min}
+                  onChange={(e) => setNumber("minFibonacciNumbers", parseInt(e.target.value) || 1)}
+                  className={clsx("w-full text-sm border rounded px-2 py-1", !config.useFibonacciFilter && "opacity-50")}
+                  disabled={!config.useFibonacciFilter}
+                />
+                <div className="text-xs text-amber-600 mt-2 bg-amber-50 p-1.5 rounded">
+                  💡 {getHint('fibonacci')}
+                </div>
+              </div>
+            </div>
+
+            {/* Quick action: Apply all recommended */}
+            <div className="flex justify-end pt-2 border-t border-amber-200">
+              <button
+                onClick={() => {
+                  setConfig(prev => ({
+                    ...prev,
+                    usePrimeCountFilter: true,
+                    minPrimes: statDefaults.primes.min,
+                    maxPrimes: statDefaults.primes.max,
+                    useDecadeBalanceFilter: true,
+                    minDecadesRepresented: statDefaults.decades.min,
+                    useEdgeFilter: true,
+                    minEdgeNumbers: statDefaults.edges.min,
+                    maxEdgeNumbers: statDefaults.edges.max,
+                    useSpreadFilter: true,
+                    minAverageSpread: statDefaults.spread.min,
+                    useFibonacciFilter: true,
+                    minFibonacciNumbers: statDefaults.fibonacci.min,
+                  }));
+                }}
+                className="text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-amber-500 hover:bg-amber-600 text-white shadow-sm"
+              >
+                ⚡ Aplicar Todos os Filtros Mandel Recomendados
+              </button>
+            </div>
+          </div>
       </div>
     </div>
   );
