@@ -131,6 +131,7 @@ function App() {
         .finally(() => {
           setIsLoading(false);
         });
+      }
     }
   }, [currentLotteryId, lottery.gameSize, apiUrl, lottery]);
 
