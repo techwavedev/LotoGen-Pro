@@ -1,5 +1,9 @@
 import { read, utils } from 'xlsx';
-import { Game, FilterConfig, HistoryAnalysis, NumberStat, BalanceStat, RepetitionStats, LotteryDefinition } from '../types';
+import { 
+  Game, FilterConfig, HistoryAnalysis, NumberStat, BalanceStat, RepetitionStats, LotteryDefinition,
+  DelayStats, SumRangeStats, ConsecutiveStats, TrendStats, RepeatBetweenDrawsStats, QuadrantStats,
+  ExtendedHistoryAnalysis, ExtendedFilterConfig
+} from '../types';
 
 // Cache for Primes to avoid recalculating
 const PRIMES_SET = new Set([
@@ -304,6 +308,209 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
   };
 };
 
+// ============ ADVANCED STATISTICAL ANALYSIS FUNCTIONS ============
+
+// 1. DELAY ANALYSIS - Análise de Atrasos
+export const analyzeDelays = (history: Game[], lottery: LotteryDefinition): DelayStats[] => {
+  const totalGames = history.length;
+  const delays: DelayStats[] = [];
+  
+  for (let num = 1; num <= lottery.totalNumbers; num++) {
+    let lastSeenIndex = -1;
+    let maxDelay = 0;
+    let totalDelay = 0;
+    let delayCount = 0;
+    let prevIndex = -1;
+    
+    // Iterate from oldest to newest
+    for (let i = 0; i < history.length; i++) {
+      if (history[i].includes(num)) {
+        if (lastSeenIndex === -1 || i > lastSeenIndex) {
+          lastSeenIndex = i;
+        }
+        if (prevIndex !== -1) {
+          const gap = i - prevIndex;
+          totalDelay += gap;
+          delayCount++;
+          maxDelay = Math.max(maxDelay, gap);
+        }
+        prevIndex = i;
+      }
+    }
+    
+    const delay = lastSeenIndex === -1 ? totalGames : (totalGames - 1 - lastSeenIndex);
+    
+    delays.push({
+      number: num,
+      lastSeen: lastSeenIndex === -1 ? 0 : (totalGames - lastSeenIndex),
+      delay,
+      maxDelay,
+      avgDelay: delayCount > 0 ? Math.round(totalDelay / delayCount * 10) / 10 : 0
+    });
+  }
+  
+  return delays.sort((a, b) => b.delay - a.delay);
+};
+
+// 2. SUM RANGE ANALYSIS - Análise de Faixa de Soma
+export const analyzeSumRange = (history: Game[]): SumRangeStats => {
+  if (history.length === 0) {
+    return { min: 0, max: 0, average: 0, stdDev: 0, mostCommonRange: [0, 0] };
+  }
+  
+  const sums = history.map(g => g.reduce((a, b) => a + b, 0));
+  const sorted = [...sums].sort((a, b) => a - b);
+  
+  const avg = sums.reduce((a, b) => a + b, 0) / sums.length;
+  const variance = sums.reduce((a, b) => a + (b - avg) ** 2, 0) / sums.length;
+  
+  return {
+    min: sorted[0],
+    max: sorted[sorted.length - 1],
+    average: Math.round(avg * 10) / 10,
+    stdDev: Math.round(Math.sqrt(variance) * 10) / 10,
+    mostCommonRange: [
+      sorted[Math.floor(sorted.length * 0.25)],  // P25
+      sorted[Math.floor(sorted.length * 0.75)]   // P75
+    ]
+  };
+};
+
+// 3. CONSECUTIVE ANALYSIS - Análise de Consecutivos
+export const analyzeConsecutives = (history: Game[]): ConsecutiveStats => {
+  const distribution: Record<number, number> = {};
+  let totalPairs = 0;
+  
+  for (const game of history) {
+    let pairs = 0;
+    const sorted = [...game].sort((a, b) => a - b);
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] === sorted[i-1] + 1) pairs++;
+    }
+    distribution[pairs] = (distribution[pairs] || 0) + 1;
+    totalPairs += pairs;
+  }
+  
+  const mostCommon = Object.entries(distribution)
+    .sort((a, b) => b[1] - a[1])[0]?.[0] || '0';
+  
+  return {
+    distribution,
+    avgPairs: history.length > 0 ? Math.round(totalPairs / history.length * 10) / 10 : 0,
+    mostCommon: Number(mostCommon)
+  };
+};
+
+// 4. TREND ANALYSIS - Análise de Tendência (Últimos N Sorteios)
+export const analyzeTrends = (history: Game[], lottery: LotteryDefinition, recentN = 20): TrendStats => {
+  if (history.length < recentN) {
+    return { recentHot: [], recentCold: [], emerging: [], declining: [] };
+  }
+  
+  const recentHistory = history.slice(-recentN);
+  const olderHistory = history.slice(-recentN * 2, -recentN);
+  
+  const recentCounts = new Array(lottery.totalNumbers + 1).fill(0);
+  const olderCounts = new Array(lottery.totalNumbers + 1).fill(0);
+  
+  recentHistory.forEach(g => g.forEach(n => { if (n <= lottery.totalNumbers) recentCounts[n]++; }));
+  olderHistory.forEach(g => g.forEach(n => { if (n <= lottery.totalNumbers) olderCounts[n]++; }));
+  
+  const trends: { number: number; recentFreq: number; olderFreq: number; trend: number }[] = [];
+  const olderLen = Math.max(olderHistory.length, 1);
+  
+  for (let i = 1; i <= lottery.totalNumbers; i++) {
+    trends.push({
+      number: i,
+      recentFreq: recentCounts[i] / recentN,
+      olderFreq: olderCounts[i] / olderLen,
+      trend: (recentCounts[i] / recentN) - (olderCounts[i] / olderLen)
+    });
+  }
+  
+  const byRecent = [...trends].sort((a, b) => b.recentFreq - a.recentFreq);
+  const byTrend = [...trends].sort((a, b) => b.trend - a.trend);
+  
+  return {
+    recentHot: byRecent.slice(0, 10).map(t => t.number),
+    recentCold: byRecent.slice(-10).reverse().map(t => t.number),
+    emerging: byTrend.slice(0, 10).map(t => t.number),
+    declining: byTrend.slice(-10).reverse().map(t => t.number)
+  };
+};
+
+// 5. REPEAT ANALYSIS - Análise de Repetições entre Sorteios
+export const analyzeRepeats = (history: Game[]): RepeatBetweenDrawsStats => {
+  if (history.length < 2) {
+    return { avgRepeats: 0, distribution: {} };
+  }
+  
+  const distribution: Record<number, number> = {};
+  let totalRepeats = 0;
+  
+  for (let i = 1; i < history.length; i++) {
+    const prev = new Set(history[i - 1]);
+    const repeats = history[i].filter(n => prev.has(n)).length;
+    distribution[repeats] = (distribution[repeats] || 0) + 1;
+    totalRepeats += repeats;
+  }
+  
+  return {
+    avgRepeats: Math.round(totalRepeats / (history.length - 1) * 10) / 10,
+    distribution
+  };
+};
+
+// 6. QUADRANT/GROUP ANALYSIS - Análise de Distribuição por Grupos
+export const analyzeQuadrants = (history: Game[], lottery: LotteryDefinition): QuadrantStats => {
+  const groupCount = 4;
+  const groupSize = Math.ceil(lottery.totalNumbers / groupCount);
+  const groups: { range: string; expected: number; actual: number }[] = [];
+  
+  for (let g = 0; g < groupCount; g++) {
+    const start = g * groupSize + 1;
+    const end = Math.min((g + 1) * groupSize, lottery.totalNumbers);
+    groups.push({
+      range: `${String(start).padStart(2, '0')}-${String(end).padStart(2, '0')}`,
+      expected: lottery.gameSize / groupCount,
+      actual: 0
+    });
+  }
+  
+  let totalNumbers = 0;
+  for (const game of history) {
+    game.forEach(n => {
+      const groupIdx = Math.min(groupCount - 1, Math.floor((n - 1) / groupSize));
+      groups[groupIdx].actual++;
+      totalNumbers++;
+    });
+  }
+  
+  // Normalize to average per game
+  if (history.length > 0) {
+    groups.forEach(g => {
+      g.actual = Math.round((g.actual / history.length) * 100) / 100;
+    });
+  }
+  
+  return { groups };
+};
+
+// 7. EXTENDED HISTORY ANALYSIS - Combina todas as análises
+export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefinition): ExtendedHistoryAnalysis => {
+  const baseAnalysis = analyzeHistory(history, lottery);
+  
+  return {
+    ...baseAnalysis,
+    delayStats: analyzeDelays(history, lottery),
+    sumRangeStats: analyzeSumRange(history),
+    consecutiveStats: analyzeConsecutives(history),
+    trendStats: analyzeTrends(history, lottery),
+    repeatBetweenDrawsStats: analyzeRepeats(history),
+    quadrantStats: analyzeQuadrants(history, lottery)
+  };
+};
+
 const generateRandomGame = (lottery: LotteryDefinition): Game => {
   const nums = new Set<number>();
   while (nums.size < lottery.gameSize) {
@@ -441,6 +648,213 @@ export const generateGames = async (
         if (lottery.gameSize <= 20) {
             if (config.exclude12Hits && hits === matchLimit - 3) { isValid = false; break; }
             if (config.exclude11Hits && hits === matchLimit - 4) { isValid = false; break; }
+        }
+      }
+    }
+
+    if (isValid) {
+      result.push(candidate);
+    }
+  }
+
+  return result;
+};
+
+// Extended game generation with advanced filters
+export const generateGamesExtended = async (
+  count: number,
+  history: Game[],
+  config: ExtendedFilterConfig,
+  lottery: LotteryDefinition,
+  hotNumbers: number[] = [],
+  extendedAnalysis?: ExtendedHistoryAnalysis
+): Promise<Game[]> => {
+  const result: Game[] = [];
+  let attempts = 0;
+  const MAX_ATTEMPTS = count * 8000; // More attempts for stricter filters
+
+  const { lines: LINES, columns: COLUMNS } = getGridStructure(lottery);
+  const hotSet = new Set(hotNumbers);
+  const checkHotCold = config.useHotColdFilter && hotNumbers.length > 0;
+  
+  // Pre-compute delay data if filter is enabled
+  const delayedNumbersSet = new Set<number>();
+  if (config.useDelayFilter && extendedAnalysis) {
+    extendedAnalysis.delayStats
+      .filter(d => d.delay >= config.delayThreshold)
+      .forEach(d => delayedNumbersSet.add(d.number));
+  }
+  
+  // Pre-compute trend data if filter is enabled
+  const trendingHotSet = new Set<number>(extendedAnalysis?.trendStats.emerging || []);
+  
+  // Last draw for repeat filter
+  const lastDraw = history.length > 0 ? new Set(history[history.length - 1]) : new Set<number>();
+
+  while (result.length < count && attempts < MAX_ATTEMPTS) {
+    attempts++;
+    const candidate = generateRandomGame(lottery);
+    let isValid = true;
+
+    // ============ BASIC FILTERS (from original) ============
+    
+    // 1. Hot/Cold Filter
+    if (checkHotCold) {
+      let hotCount = 0;
+      for (const num of candidate) {
+        if (hotSet.has(num)) hotCount++;
+      }
+      if (hotCount < config.minHotNumbers || hotCount > config.maxHotNumbers) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // 2. Basic Pattern Filters
+    if (config.excludeAllEven || config.excludeAllOdd) {
+      const evenCount = candidate.filter(n => n % 2 === 0).length;
+      if (config.excludeAllEven && evenCount === lottery.gameSize) isValid = false;
+      if (config.excludeAllOdd && evenCount === 0) isValid = false; 
+    }
+    if (!isValid) continue;
+
+    if (config.excludeAllPrimes) {
+      const allPrime = candidate.every(n => PRIMES_SET.has(n));
+      if (allPrime) isValid = false;
+    }
+    if (!isValid) continue;
+
+    if (config.excludeSequences) {
+      if (isSequential(candidate, lottery.gameSize)) isValid = false;
+    }
+    if (!isValid) continue;
+
+    // Lines/Columns Logic
+    if (config.excludeFullLines) {
+      for (const line of LINES) {
+        if (line.every(n => candidate.includes(n))) {
+          isValid = false; break;
+        }
+      }
+    }
+    if (!isValid) continue;
+
+    if (config.excludeFullColumns) {
+      for (const col of COLUMNS) {
+        if (col.every(n => candidate.includes(n))) {
+          isValid = false; break;
+        }
+      }
+    }
+    if (!isValid) continue;
+
+    if (lottery.id === 'lotofacil') {
+      if (config.excludeAlternatingLines) {
+        const line0Full = LINES[0].every(n => candidate.includes(n));
+        const line2Full = LINES[2].every(n => candidate.includes(n));
+        const line4Full = LINES[4].every(n => candidate.includes(n));
+        const line1Full = LINES[1].every(n => candidate.includes(n));
+        const line3Full = LINES[3].every(n => candidate.includes(n));
+        if ((line0Full && line2Full && line4Full) || (line1Full && line3Full)) isValid = false;
+      }
+      if (isValid && config.excludeAlternatingColumns) {
+        const col0Full = COLUMNS[0].every(n => candidate.includes(n));
+        const col2Full = COLUMNS[2].every(n => candidate.includes(n));
+        const col4Full = COLUMNS[4].every(n => candidate.includes(n));
+        const col1Full = COLUMNS[1].every(n => candidate.includes(n));
+        const col3Full = COLUMNS[3].every(n => candidate.includes(n));
+        if ((col0Full && col2Full && col4Full) || (col1Full && col3Full)) isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // ============ NEW ADVANCED FILTERS ============
+
+    // 3. DELAY FILTER - Números Atrasados
+    if (config.useDelayFilter && delayedNumbersSet.size > 0) {
+      const delayedInGame = candidate.filter(n => delayedNumbersSet.has(n)).length;
+      if (delayedInGame < config.minDelayedNumbers) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // 4. SUM FILTER - Faixa de Soma
+    if (config.useSumFilter) {
+      const sum = candidate.reduce((a, b) => a + b, 0);
+      if (sum < config.minSum || sum > config.maxSum) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // 5. CONSECUTIVE FILTER - Máximo de Consecutivos
+    if (config.useConsecutiveFilter) {
+      let pairs = 0;
+      for (let i = 1; i < candidate.length; i++) {
+        if (candidate[i] === candidate[i - 1] + 1) pairs++;
+      }
+      if (pairs > config.maxConsecutivePairs) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // 6. TREND FILTER - Números em Tendência
+    if (config.useTrendFilter && trendingHotSet.size > 0) {
+      const trendingInGame = candidate.filter(n => trendingHotSet.has(n)).length;
+      if (trendingInGame < config.minTrendingHot) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // 7. REPEAT FILTER - Repetições do Último Sorteio
+    if (config.useRepeatFilter && lastDraw.size > 0) {
+      const repeats = candidate.filter(n => lastDraw.has(n)).length;
+      if (repeats < config.minRepeatsFromLast || repeats > config.maxRepeatsFromLast) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // 8. INTERLEAVING FILTER - Equilíbrio Baixas/Altas
+    if (config.useInterleavingFilter && config.balanceGroups) {
+      const mid = Math.floor(lottery.totalNumbers / 2);
+      const lowCount = candidate.filter(n => n <= mid).length;
+      const highCount = candidate.length - lowCount;
+      const diff = Math.abs(lowCount - highCount);
+      // Allow max 30% imbalance (configurable threshold)
+      const maxImbalance = Math.ceil(lottery.gameSize * 0.3);
+      if (diff > maxImbalance) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // ============ HISTORICAL DATA FILTERS ============
+    if (history.length > 0) {
+      const matchLimit = lottery.drawSize;
+      const matchLimitMinus1 = lottery.drawSize - 1;
+      const matchLimitMinus2 = lottery.drawSize - 2;
+
+      for (const pastGame of history) {
+        let hits = 0;
+        let i = 0, j = 0;
+        
+        while (i < candidate.length && j < pastGame.length) {
+          if (candidate[i] === pastGame[j]) { hits++; i++; j++; }
+          else if (candidate[i] < pastGame[j]) i++;
+          else j++;
+        }
+        
+        if (config.exclude15Hits && hits === matchLimit) { isValid = false; break; }
+        if (config.exclude14Hits && hits === matchLimitMinus1) { isValid = false; break; }
+        if (config.exclude13Hits && hits === matchLimitMinus2) { isValid = false; break; }
+        
+        if (lottery.gameSize <= 20) {
+          if (config.exclude12Hits && hits === matchLimit - 3) { isValid = false; break; }
+          if (config.exclude11Hits && hits === matchLimit - 4) { isValid = false; break; }
         }
       }
     }
