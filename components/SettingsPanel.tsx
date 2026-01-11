@@ -1,5 +1,5 @@
 import React from "react";
-import { FilterConfig, LotteryDefinition } from "../types";
+import { ExtendedFilterConfig, LotteryDefinition, LOTTERY_MANDEL_RECOMMENDATIONS, ExtendedHistoryAnalysis } from "../types";
 import {
   AlertTriangle,
   CheckCircle,
@@ -7,16 +7,21 @@ import {
   Eye,
   Scale,
   Flame,
+  Timer,
+  Hash,
+  TrendingUp,
+  Repeat,
   Snowflake,
 } from "lucide-react";
 import clsx from "clsx";
 
 interface SettingsPanelProps {
-  config: FilterConfig;
-  setConfig: React.Dispatch<React.SetStateAction<FilterConfig>>;
+  config: ExtendedFilterConfig;
+  setConfig: React.Dispatch<React.SetStateAction<ExtendedFilterConfig>>;
   historyCount: number;
   onOpenExamples: () => void;
   lottery: LotteryDefinition;
+  extendedAnalysis?: ExtendedHistoryAnalysis | null;
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -25,17 +30,107 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   historyCount,
   onOpenExamples,
   lottery,
+  extendedAnalysis,
 }) => {
-  const toggle = (key: keyof FilterConfig) => {
+  const toggle = (key: keyof ExtendedFilterConfig) => {
     setConfig((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const setNumber = (key: keyof FilterConfig, value: number) => {
+  const setNumber = (key: keyof ExtendedFilterConfig, value: number) => {
     setConfig((prev) => ({ ...prev, [key]: value }));
   };
 
   const hasHistory = historyCount > 0;
   const isLotofacil = lottery.id === "lotofacil";
+
+  // Compute dynamic defaults from historical analysis
+  const staticRec = LOTTERY_MANDEL_RECOMMENDATIONS[lottery.id] || { 
+    primes: { min: 0, max: lottery.gameSize, hint: "Padrão" }, 
+    decades: { min: 1, total: 1, hint: "Padrão" }, 
+    edges: { min: 0, max: lottery.gameSize, hint: "Padrão" }, 
+    spread: { min: 1, hint: "Padrão" }, 
+    fibonacci: { min: 0, available: 0, hint: "Padrão" } 
+  };
+
+  const statDefaults = React.useMemo(() => {
+    const hasAnalysis = !!extendedAnalysis;
+    
+    // Heuristics for unsupported lotteries or no history
+    const baseSumMin = Math.floor(lottery.gameSize * 4.5); // approx
+    const baseSumMax = Math.ceil(lottery.gameSize * 13.5); // approx
+    
+    if (!extendedAnalysis) {
+      return {
+        hasAnalysis: false,
+        sum: [baseSumMin, baseSumMax],
+        consecutive: 3, // Safe default
+        delay: 10,
+        repeat: [1, 5],
+        primes: { min: staticRec.primes.min, max: staticRec.primes.max },
+        decades: { min: staticRec.decades.min },
+        edges: { min: staticRec.edges.min, max: staticRec.edges.max },
+        spread: { min: staticRec.spread.min },
+        fibonacci: { min: staticRec.fibonacci.min },
+        hints: {
+          sum: `Padrão: ${baseSumMin}-${baseSumMax}`,
+          consecutive: "Padrão: Máx 3",
+          delay: "Padrão: >10 atrasos",
+          repeat: "Padrão: 1-5 repetidos"
+        }
+      };
+    }
+    
+    // Use actual historical analysis data
+    const primeRec = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
+    const edgeRec = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
+    const decadeAvg = extendedAnalysis.decadeDistributionStats?.avgDecadesCovered || staticRec.decades.min;
+    const spreadAvg = extendedAnalysis.spreadStats?.recommendedMinSpread || staticRec.spread.min;
+    
+    // Stats
+    const sumAvg = extendedAnalysis.sumStats?.averageSum || (baseSumMin + baseSumMax)/2;
+    const sumMin = Math.floor(sumAvg * 0.85);
+    const sumMax = Math.ceil(sumAvg * 1.15);
+    
+    return {
+      hasAnalysis: true,
+      sum: [sumMin, sumMax],
+      consecutive: 2, // Analysis usually suggests tighter
+      delay: 8, // Analysis suggests tighter
+      repeat: [Math.max(0, Math.floor(lottery.drawSize * 0.4)), Math.ceil(lottery.drawSize * 0.6)],
+      
+      primes: { min: primeRec[0], max: primeRec[1] },
+      decades: { min: Math.floor(decadeAvg) },
+      edges: { min: edgeRec[0], max: edgeRec[1] },
+      spread: { min: Math.max(0.5, spreadAvg) },
+      fibonacci: { min: staticRec.fibonacci.min },
+      
+      hints: {
+        sum: `Histórico: média ${sumAvg.toFixed(0)}`,
+        consecutive: "Histórico: Evita seq. longas",
+        delay: "Histórico: Baseado em atrasos",
+        repeat: "Histórico: Baseado em repetições"
+      }
+    };
+  }, [extendedAnalysis, staticRec, lottery]);
+
+  // Generate dynamic hints based on analysis
+  const getHint = (type: 'primes' | 'decades' | 'edges' | 'spread' | 'fibonacci') => {
+    const baseHint = staticRec[type].hint;
+    if (!extendedAnalysis) return baseHint;
+    
+    switch (type) {
+      case 'primes':
+        return `Histórico: ${extendedAnalysis.primeDistributionStats?.avgPrimesPerGame?.toFixed(1) || '?'} primos/jogo. ${baseHint}`;
+      case 'decades':
+        return `Histórico: ${extendedAnalysis.decadeDistributionStats?.avgDecadesCovered?.toFixed(1) || '?'} dezenas/jogo. ${baseHint}`;
+      case 'edges':
+        return `Histórico: ${extendedAnalysis.edgeNumberStats?.avgEdgesPerGame?.toFixed(1) || '?'} bordas/jogo. ${baseHint}`;
+      case 'spread':
+        return `Histórico: gap médio ${extendedAnalysis.spreadStats?.avgSpread?.toFixed(1) || '?'}. ${baseHint}`;
+      default:
+        return baseHint;
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 mb-6 border border-gray-200">
