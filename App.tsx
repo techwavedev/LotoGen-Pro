@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload } from 'lucide-react';
-import { Game, DEFAULT_CONFIG, FilterConfig, HistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId } from './types';
-import { parseHistoryFile, generateGames, analyzeHistory } from './services/lotteryService';
+import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS } from './types';
+import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended } from './services/lotteryService';
 import GameTicket from './components/GameTicket';
 import SettingsPanel from './components/SettingsPanel';
 import StatisticsPanel from './components/StatisticsPanel';
@@ -16,11 +16,11 @@ function App() {
   const lottery = LOTTERIES[currentLotteryId];
 
   const [history, setHistory] = useState<Game[]>([]);
-  const [analysis, setAnalysis] = useState<HistoryAnalysis | null>(null);
+  const [analysis, setAnalysis] = useState<ExtendedHistoryAnalysis | null>(null);
   const [generatedGames, setGeneratedGames] = useState<Game[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [config, setConfig] = useState<FilterConfig>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<ExtendedFilterConfig>(DEFAULT_EXTENDED_CONFIG);
   const [gamesCount, setGamesCount] = useState<number>(5);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
