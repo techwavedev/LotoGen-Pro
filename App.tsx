@@ -139,6 +139,54 @@ function App() {
     setCurrentLotteryId(id);
   };
 
+  // Auto-configure "Best Static Defaults" when lottery changes
+  useEffect(() => {
+    const rec = LOTTERY_MANDEL_RECOMMENDATIONS[currentLotteryId];
+    if (rec) {
+        setConfig(prev => ({
+            ...prev,
+            // Reset to defaults but ENABLE smart filters
+            ...DEFAULT_EXTENDED_CONFIG,
+            usePrimeCountFilter: true,
+            minPrimes: rec.primes.min,
+            maxPrimes: rec.primes.max,
+            
+            useDecadeBalanceFilter: true,
+            minDecadesRepresented: rec.decades.min,
+            
+            useEdgeFilter: true,
+            minEdgeNumbers: rec.edges.min,
+            maxEdgeNumbers: rec.edges.max,
+            
+            useSpreadFilter: true,
+            minAverageSpread: rec.spread.min,
+            
+            useFibonacciFilter: true,
+            minFibonacciNumbers: rec.fibonacci.min
+        }));
+    }
+  }, [currentLotteryId]);
+
+  // Auto-optimize when Analysis loads
+  useEffect(() => {
+    if (analysis) {
+        // When analysis loads, we can be more precise if we want,
+        // effectively "auto-enabling" everything again to confirm valid ranges.
+        // For now, let's just ensure they are enabled.
+        setConfig(prev => ({
+            ...prev,
+            usePrimeCountFilter: true,
+            useDecadeBalanceFilter: true,
+            useEdgeFilter: true,
+            useSpreadFilter: true,
+            useFibonacciFilter: true,
+            useDelayFilter: true,
+            useSumFilter: true,
+            useConsecutiveFilter: true
+        }));
+    }
+  }, [analysis]);
+
   // Auto-fetch and load history from asloterias.com.br
   const handleDownloadHistory = async () => {
     setIsLoading(true);
