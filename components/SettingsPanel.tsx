@@ -90,6 +90,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const edgeRec = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
     const decadeAvg = extendedAnalysis.decadeDistributionStats?.avgDecadesCovered || staticRec.decades.min;
     const spreadAvg = extendedAnalysis.spreadStats?.recommendedMinSpread || staticRec.spread.min;
+    const fibRec = extendedAnalysis.fibonacciStats?.recommendedRange || [staticRec.fibonacci.min, staticRec.fibonacci.min + 2];
     
     // Stats
     const sumAvg = extendedAnalysis.sumStats?.averageSum || (baseSumMin + baseSumMax)/2;
@@ -100,24 +101,33 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const avgConsecutive = extendedAnalysis.consecutiveStats?.avgPairs || 0;
     const histConsecutive = Math.ceil(avgConsecutive + 2); // Add buffer
 
+    // Historical Delay: Use average delay or median delay from analysis
+    const avgDelay = extendedAnalysis.delayStats?.[0]?.avgDelay || 8;
+    const safeDelay = Math.floor(avgDelay * 0.8); // Slightly lower than avg for safer filter
+
+    // Historical Repeats: Use average repeats
+    const avgRepeats = extendedAnalysis.repeatBetweenDrawsStats?.avgRepeats || 0;
+    const minRep = Math.max(0, Math.floor(avgRepeats - 2));
+    const maxRep = Math.ceil(avgRepeats + 2);
+
     return {
       hasAnalysis: true,
       sum: [sumMin, sumMax],
       consecutive: histConsecutive > 0 ? histConsecutive : safeConsecutive,
-      delay: 8, // Analysis suggests tighter
-      repeat: [Math.max(0, Math.floor(lottery.drawSize * 0.4)), Math.ceil(lottery.drawSize * 0.6)],
+      delay: safeDelay > 2 ? safeDelay : 5, 
+      repeat: [minRep, maxRep],
       
       primes: { min: primeRec[0], max: primeRec[1] },
       decades: { min: Math.floor(decadeAvg) },
       edges: { min: edgeRec[0], max: edgeRec[1] },
       spread: { min: Math.max(0.5, spreadAvg) },
-      fibonacci: { min: staticRec.fibonacci.min },
+      fibonacci: { min: fibRec[0] }, // Just min for now as config only has min
       
       hints: {
         sum: `Histórico: média ${sumAvg.toFixed(0)}`,
         consecutive: `Histórico: média ${avgConsecutive.toFixed(1)}`,
-        delay: "Histórico: Baseado em atrasos",
-        repeat: "Histórico: Baseado em repetições"
+        delay: `Histórico: média ${avgDelay.toFixed(1)} concursos`,
+        repeat: `Histórico: média ${avgRepeats.toFixed(1)} repetido(s)`
       }
     };
   }, [extendedAnalysis, staticRec, lottery]);

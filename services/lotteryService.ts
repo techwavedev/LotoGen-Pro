@@ -496,23 +496,24 @@ export const analyzeQuadrants = (history: Game[], lottery: LotteryDefinition): Q
   return { groups };
 };
 
+const FIBONACCI_SET = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55, 89]);
+
 // 8. HELPERS FOR MANDEL STATS
 const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
   let totalPrimes = 0;
   let totalEdges = 0;
   let totalSpread = 0;
   let totalDecades = 0;
+  let totalFibonacci = 0;
 
   history.forEach(game => {
     // Primes
     totalPrimes += game.filter(n => PRIMES_SET.has(n)).length;
     
+    // Fibonacci
+    totalFibonacci += game.filter(n => FIBONACCI_SET.has(n)).length;
+    
     // Edges (Numbers 1-cols, multiples of cols, multiples of cols + 1, last numbers)
-    // Simply: if column is 1 or cols OR row is 1 or maxRow
-    // Easier heuristic: explicitly check against edges
-    // For now, simpler heuristic: outer bound numbers
-    // Let's rely on standard edge definition: 
-    // Top Row, Bottom Row, First Col, Last Col
     const { totalNumbers, cols } = lottery;
     const numRows = Math.ceil(totalNumbers / cols);
     const edges = game.filter(n => {
@@ -522,17 +523,16 @@ const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
     }).length;
     totalEdges += edges;
 
-    // Spread (Max - Min) or Avg Dist?
-    // Using Avg Distance
+    // Spread (Avg Dist)
     let spreadSum = 0;
-    for(let i=0; i<game.length-1; i++) {
-        spreadSum += (game[i+1] - game[i]);
+    if (game.length > 1) {
+        for(let i=0; i<game.length-1; i++) {
+            spreadSum += (game[i+1] - game[i]);
+        }
+        totalSpread += spreadSum / (game.length - 1);
     }
-    const avgDist = spreadSum / (game.length - 1);
-    totalSpread += avgDist;
 
-    // Decades (Colunas 0-9 usually? Or Groups of 10?)
-    // Usually "Decades" in Brazil means 01-10, 11-20...
+    // Decades
     const decades = new Set(game.map(n => Math.floor((n-1)/10)));
     totalDecades += decades.size;
   });
@@ -541,22 +541,27 @@ const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
   const avgEdges = totalEdges / history.length;
   const avgSpread = totalSpread / history.length;
   const avgDecades = totalDecades / history.length;
+  const avgFibonacci = totalFibonacci / history.length;
 
   return {
     primeDistributionStats: {
         avgPrimesPerGame: avgPrimes,
-        recommendedRange: [Math.floor(avgPrimes * 0.8), Math.ceil(avgPrimes * 1.2)] as [number, number]
+        recommendedRange: [Math.floor(avgPrimes * 0.7), Math.ceil(avgPrimes * 1.3)] as [number, number]
     },
     decadeDistributionStats: {
         avgDecadesCovered: avgDecades
     },
     edgeNumberStats: {
         avgEdgesPerGame: avgEdges,
-        recommendedRange: [Math.floor(avgEdges * 0.8), Math.ceil(avgEdges * 1.2)] as [number, number]
+        recommendedRange: [Math.floor(avgEdges * 0.7), Math.ceil(avgEdges * 1.3)] as [number, number]
     },
     spreadStats: {
         avgSpread: avgSpread,
-        recommendedMinSpread: Math.floor(avgSpread * 0.7)
+        recommendedMinSpread: Math.floor(avgSpread * 0.6)
+    },
+    fibonacciStats: {
+        avgFibonacciPerGame: avgFibonacci,
+        recommendedRange: [Math.floor(avgFibonacci * 0.6), Math.ceil(avgFibonacci * 1.4)] as [number, number]
     }
   };
 };
@@ -581,7 +586,8 @@ export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefiniti
     decadeDistributionStats: mandelStats.decadeDistributionStats,
     edgeNumberStats: mandelStats.edgeNumberStats,
     spreadStats: mandelStats.spreadStats,
-    sumStats: { averageSum: sumStats.average }
+    sumStats: { averageSum: sumStats.average },
+    fibonacciStats: mandelStats.fibonacciStats
   };
 };
 
