@@ -197,6 +197,26 @@ export interface ExtendedHistoryAnalysis extends HistoryAnalysis {
   trendStats: TrendStats;
   repeatBetweenDrawsStats: RepeatBetweenDrawsStats;
   quadrantStats: QuadrantStats;
+  
+  // Mandel Stats (Opcionais pois dependem da implementação de análise)
+  primeDistributionStats?: {
+    avgPrimesPerGame: number;
+    recommendedRange: [number, number];
+  };
+  decadeDistributionStats?: {
+    avgDecadesCovered: number;
+  };
+  edgeNumberStats?: {
+    avgEdgesPerGame: number;
+    recommendedRange: [number, number];
+  };
+  spreadStats?: {
+    avgSpread: number;
+    recommendedMinSpread: number;
+  };
+  sumStats?: {
+    averageSum: number;
+  };
 }
 
 // Configuração de Filtros Estendida
@@ -227,6 +247,24 @@ export interface ExtendedFilterConfig extends FilterConfig {
   // Interleaving Filter - Intercalamento
   useInterleavingFilter: boolean;
   balanceGroups: boolean;     // Equilibrar dezenas baixas/altas
+
+  // Mandel Strategy Filters
+  usePrimeCountFilter: boolean;
+  minPrimes: number;
+  maxPrimes: number;
+  
+  useDecadeBalanceFilter: boolean;
+  minDecadesRepresented: number;
+  
+  useEdgeFilter: boolean;
+  minEdgeNumbers: number;
+  maxEdgeNumbers: number;
+  
+  useSpreadFilter: boolean;
+  minAverageSpread: number;
+
+  useFibonacciFilter: boolean;
+  minFibonacciNumbers: number;
 }
 
 // Default para novos filtros
@@ -247,4 +285,49 @@ export const DEFAULT_EXTENDED_CONFIG: ExtendedFilterConfig = {
   maxRepeatsFromLast: 5,
   useInterleavingFilter: false,
   balanceGroups: true,
+  
+  // Mandel Defaults
+  usePrimeCountFilter: true,
+  minPrimes: 0,
+  maxPrimes: 15,
+  useDecadeBalanceFilter: true,
+  minDecadesRepresented: 2,
+  useEdgeFilter: true,
+  minEdgeNumbers: 0,
+  maxEdgeNumbers: 15,
+  useSpreadFilter: true,
+  minAverageSpread: 2,
+  useFibonacciFilter: true,
+  minFibonacciNumbers: 1,
+};
+
+export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {
+  lotofacil: {
+    primes: { min: 4, max: 7, hint: "Em média 5 ou 6 primos" },
+    decades: { min: 2, total: 2, hint: "Cubra as 5 linhas" },
+    edges: { min: 8, max: 11, hint: "8 a 11 números na borda" },
+    spread: { min: 2, hint: "Evite aglomerados" },
+    fibonacci: { min: 3, available: 5, hint: "3 a 5" }
+  },
+  megasena: {
+    primes: { min: 1, max: 3, hint: "1 a 3 primos" },
+    decades: { min: 4, total: 6, hint: "Distribua em 4+ décadas" },
+    edges: { min: 2, max: 4, hint: "Equilíbrio centro/borda" },
+    spread: { min: 5, hint: "Espalhe bem os números" },
+    fibonacci: { min: 0, available: 7, hint: "0 a 2" }
+  },
+  quina: {
+    primes: { min: 1, max: 3, hint: "1 a 3 primos" },
+    decades: { min: 3, total: 8, hint: "Distribua em 3+ décadas" },
+    edges: { min: 2, max: 4, hint: "Equilíbrio borda" },
+    spread: { min: 4, hint: "Espalhe bem" },
+    fibonacci: { min: 0, available: 10, hint: "0 a 2" }
+  },
+  lotomania: {
+    primes: { min: 10, max: 15, hint: "10 a 15 primos" },
+    decades: { min: 8, total: 10, hint: "Cubra quase todas décadas" },
+    edges: { min: 12, max: 18, hint: "Borda importante" },
+    spread: { min: 2, hint: "Espalhe" },
+    fibonacci: { min: 4, available: 16, hint: "4 a 8" }
+  }
 };
