@@ -217,6 +217,10 @@ export interface ExtendedHistoryAnalysis extends HistoryAnalysis {
   sumStats?: {
     averageSum: number;
   };
+  fibonacciStats?: {
+    avgFibonacciPerGame: number;
+    recommendedRange: [number, number];
+  };
 }
 
 // Configuração de Filtros Estendida
