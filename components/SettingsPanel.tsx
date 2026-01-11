@@ -56,13 +56,20 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const hasAnalysis = !!extendedAnalysis;
     
     // Heuristics for unsupported lotteries or no history
-    const baseSumMin = Math.floor(lottery.gameSize * 4.5); // approx
-    const baseSumMax = Math.ceil(lottery.gameSize * 13.5); // approx
+    // Calculate expected average sum mathematically: (N * (Total+1)) / 2
+    const expectedSum = (lottery.gameSize * (lottery.totalNumbers + 1)) / 2;
+    // Allow wide variance (±25%) for default safe range
+    const baseSumMin = Math.floor(expectedSum * 0.75); 
+    const baseSumMax = Math.ceil(expectedSum * 1.25);
     
-    // Dynamic consecutive default: Lotofacil (15/25) is dense, needs high tolerance.
-    // Mega/Quina are sparse, need low tolerance.
-    const isDenseLottery = lottery.gameSize > 10;
-    const safeConsecutive = isDenseLottery ? (lottery.gameSize - 2) : 3;
+    // Dynamic consecutive default: 
+    // High density lotteries (Lotofacil 15/25, Lotomania 50/100) have varied needs.
+    // Lotomania (50 numbers) basically guarantees consecutives, so filter should be very loose or permissive.
+    // Lotofacil (15 numbers) also high density.
+    const isHighDensity = (lottery.gameSize / lottery.totalNumbers) > 0.4;
+    
+    // For Lotomania (size 50), consecutive limit of 3 is impossible. Limit should be near gameSize.
+    const safeConsecutive = isHighDensity ? (lottery.gameSize - 1) : 3;
 
     if (!extendedAnalysis) {
       return {
@@ -93,13 +100,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const fibRec = extendedAnalysis.fibonacciStats?.recommendedRange || [staticRec.fibonacci.min, staticRec.fibonacci.min + 2];
     
     // Stats
-    const sumAvg = extendedAnalysis.sumStats?.averageSum || (baseSumMin + baseSumMax)/2;
+    const sumAvg = extendedAnalysis.sumStats?.averageSum || expectedSum;
     const sumMin = Math.floor(sumAvg * 0.85);
     const sumMax = Math.ceil(sumAvg * 1.15);
     
     // Safe consecutive from history: Avg + Tolerance
     const avgConsecutive = extendedAnalysis.consecutiveStats?.avgPairs || 0;
-    const histConsecutive = Math.ceil(avgConsecutive + 2); // Add buffer
+    // For Lotomania, if avg is 0 (missing data?), fallback to safeConsecutive
+    const histConsecutive = avgConsecutive > 0 ? Math.ceil(avgConsecutive + 4) : safeConsecutive;
 
     // Historical Delay: Use average delay or median delay from analysis
     const avgDelay = extendedAnalysis.delayStats?.[0]?.avgDelay || 8;
@@ -113,7 +121,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     return {
       hasAnalysis: true,
       sum: [sumMin, sumMax],
-      consecutive: histConsecutive > 0 ? histConsecutive : safeConsecutive,
+      consecutive: histConsecutive,
       delay: safeDelay > 2 ? safeDelay : 5, 
       repeat: [minRep, maxRep],
       
