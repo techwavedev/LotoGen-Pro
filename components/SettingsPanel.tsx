@@ -940,10 +940,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                         type="checkbox"
                         checked={config.useCycleFilter || false}
                         onChange={() => toggle("useCycleFilter")}
-                        className="w-4 h-4 rounded text-pink-500 focus:ring-pink-500"
+                        disabled={!extendedAnalysis?.cycleStats || extendedAnalysis.cycleStats.missingNumbers.length === 0}
+                        className="w-4 h-4 rounded text-pink-500 focus:ring-pink-500 disabled:opacity-50"
                         style={{ accentColor: lottery.color }}
                       />
-                      <span className="text-sm font-medium text-gray-700">Forçar Fechamento de Ciclo</span>
+                      <span className={clsx("text-sm font-medium", (!extendedAnalysis?.cycleStats || extendedAnalysis.cycleStats.missingNumbers.length === 0) ? "text-gray-400" : "text-gray-700")}>
+                          Forçar Fechamento de Ciclo
+                      </span>
                     </label>
                     <p className="text-xs text-gray-500 ml-6 mt-1">
                       O gerador tentará incluir os números que faltam para fechar o ciclo atual.
@@ -951,12 +954,21 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
                 {extendedAnalysis?.cycleStats && (
                   <div className="text-right">
-                     <div className="text-xs font-bold text-pink-700">
-                        {extendedAnalysis.cycleStats.missingNumbers.length} números faltantes
-                     </div>
-                     <div className="text-[10px] text-pink-500">
-                        {extendedAnalysis.cycleStats.missingNumbers.join(', ')}
-                     </div>
+                     {extendedAnalysis.cycleStats.missingNumbers.length > 0 ? (
+                        <>
+                            <div className="text-xs font-bold text-pink-700">
+                                {extendedAnalysis.cycleStats.missingNumbers.length} números faltantes
+                            </div>
+                            <div className="text-[10px] text-pink-500">
+                                {extendedAnalysis.cycleStats.missingNumbers.join(', ')}
+                            </div>
+                        </>
+                     ) : (
+                        <div className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-lg border border-green-200">
+                           ✓ Ciclo Fechado!
+                           <span className="block font-normal text-[10px] text-green-500">Todos os números já saíram neste ciclo.</span>
+                        </div>
+                     )}
                   </div>
                 )}
              </div>

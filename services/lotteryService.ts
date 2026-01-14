@@ -521,13 +521,11 @@ export const analyzeCycles = (history: Game[], lottery: LotteryDefinition): Cycl
   
   // If cycle is closed exactly at the last game, we start a NEW cycle
   if (missing.size === 0 && cycleLength > 0) {
-      // Logic for new cycle: all numbers are missing again, length is 0 (or 1 if we count the next draw?)
-      // Actually standard cycle analysis: if it closed, the NEXT draw is step 1 of new cycle.
-      // But here we are analyzing correct CURRENT status.
-      // If missing.size is 0, it means the cycle closed on the very last draw.
-      // So the current open cycle has length 0 and ALL numbers missing.
+      // Cycle closed in the last draw. 
+      // For the purpose of "Closing the Cycle", there are NO numbers missing (it's done).
+      // Returning all numbers caused the filter to try to force ALL 25 numbers, which is impossible.
       return {
-          missingNumbers: Array.from(allNumbers).sort((a,b)=>a-b),
+          missingNumbers: [], 
           currentCycleLength: 0,
           lastCycleLength: cycleLength
       };
@@ -633,9 +631,10 @@ export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefiniti
   };
 };
 
-const generateRandomGame = (lottery: LotteryDefinition): Game => {
+const generateRandomGame = (lottery: LotteryDefinition, size?: number): Game => {
   const nums = new Set<number>();
-  while (nums.size < lottery.gameSize) {
+  const limit = size || lottery.gameSize;
+  while (nums.size < limit) {
     nums.add(Math.floor(Math.random() * lottery.totalNumbers) + 1);
   }
   return Array.from(nums).sort((a, b) => a - b);
@@ -652,20 +651,36 @@ export const generateGames = async (
   history: Game[],
   config: FilterConfig,
   lottery: LotteryDefinition,
-  hotNumbers: number[] = []
+  hotNumbers: number[] = [],
+  overrideGameSize?: number
 ): Promise<Game[]> => {
   const result: Game[] = [];
   let attempts = 0;
   const MAX_ATTEMPTS = count * 20000; 
 
+  const targetSize = overrideGameSize || lottery.gameSize;
   const { lines: LINES, columns: COLUMNS } = getGridStructure(lottery);
   const hotSet = new Set(hotNumbers);
   const checkHotCold = config.useHotColdFilter && hotNumbers.length > 0;
 
   while (result.length < count && attempts < MAX_ATTEMPTS) {
     attempts++;
-    const candidate = generateRandomGame(lottery);
+    const candidate = generateRandomGame(lottery, targetSize);
     let isValid = true;
+
+    // IMPORTANT: If we are generating Multiple Bets (larger than standard),
+    // strict filters like "Even/Odd" count might need relaxation.
+    // However, if the user explicitly ASKED for filters, we should try to honor them
+    // relative to the NEW size? Or just disable them?
+    // Current strategy: Apply filters as is. If targetSize is 18, and user wants 15 Even,
+    // that's impossible if gameSize is 15. But if user selected "Exclude All Even", that still works.
+    // Filters based on "Count" (like Mandel Primes: min 2 max 9) might fail if
+    // we generate a huge game.
+    // AUTO-ADJUST: If targetSize > lottery.gameSize, we skip "Count-based" checks or scale them?
+    // Let's Skip STRICT Count checks if size differs, effectively treating "Multiple Bets" as 
+    // "Smart Random with relaxed constraints".
+    
+    const isMultipleBet = targetSize > lottery.gameSize;
 
     // 1. Hot/Cold Filter
     if (checkHotCold) {
@@ -673,7 +688,11 @@ export const generateGames = async (
       for (const num of candidate) {
         if (hotSet.has(num)) hotCount++;
       }
-      if (hotCount < config.minHotNumbers || hotCount > config.maxHotNumbers) {
+      // If multiple bet, we allow proportionally more hot numbers
+      const ratio = targetSize / lottery.gameSize;
+      const effectiveMaxHot = isMultipleBet ? Math.ceil(config.maxHotNumbers * ratio) : config.maxHotNumbers;
+      
+      if (hotCount < config.minHotNumbers || hotCount > effectiveMaxHot) {
         isValid = false;
       }
     }
@@ -682,7 +701,9 @@ export const generateGames = async (
     // 2. Basic Pattern Filters
     if (config.excludeAllEven || config.excludeAllOdd) {
       const evenCount = candidate.filter(n => n % 2 === 0).length;
-      if (config.excludeAllEven && evenCount === lottery.gameSize) isValid = false;
+      if (config.excludeAllEven && evenCount === targetSize) isValid = false; // All Even means NO Odd? No, wait. "excludeAllEven" usually means "Don't allow a game with ONLY even numbers".
+      // Actually standard logic: "Exclude games that are ALL Even".
+      if (config.excludeAllEven && evenCount === targetSize) isValid = false;
       if (config.excludeAllOdd && evenCount === 0) isValid = false; 
     }
     if (!isValid) continue;
@@ -789,12 +810,14 @@ export const generateGamesExtended = async (
   config: ExtendedFilterConfig,
   lottery: LotteryDefinition,
   hotNumbers: number[] = [],
-  extendedAnalysis?: ExtendedHistoryAnalysis
+  extendedAnalysis?: ExtendedHistoryAnalysis,
+  overrideGameSize?: number // Optional: Generate games larger than standard (e.g. 16 numbers)
 ): Promise<Game[]> => {
   const result: Game[] = [];
   let attempts = 0;
   const MAX_ATTEMPTS = count * 200000; // Increased to allow strict filters
 
+  const targetSize = overrideGameSize || lottery.gameSize;
   const { lines: LINES, columns: COLUMNS } = getGridStructure(lottery);
   const hotSet = new Set(hotNumbers);
   const checkHotCold = config.useHotColdFilter && hotNumbers.length > 0;

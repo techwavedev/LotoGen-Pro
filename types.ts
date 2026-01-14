@@ -9,6 +9,7 @@ export interface LotteryDefinition {
   name: string;
   totalNumbers: number; // Ex: 25, 60, 80, 100
   gameSize: number; // Tamanho da Aposta (Ex: 15, 6, 5, 50)
+  maxGameSize: number; // Máximo permitido (Ex: 20 para Lotofacil)
   drawSize: number; // Tamanho do Sorteio Histórico (Ex: 15, 6, 5, 20)
   cols: number; // Colunas LÓGICAS (para filtros de Linha/Coluna baseados no volante de papel)
   visualCols?: number; // Colunas VISUAIS (para o layout do app, geralmente 5 em mobile)
@@ -23,6 +24,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     name: 'Lotofácil',
     totalNumbers: 25,
     gameSize: 15,
+    maxGameSize: 20,
     drawSize: 15,
     cols: 5,
     visualCols: 5,
@@ -35,6 +37,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     name: 'Mega-Sena',
     totalNumbers: 60,
     gameSize: 6,
+    maxGameSize: 20,
     drawSize: 6,
     cols: 10, // Filtros consideram linhas de 01-10
     visualCols: 5, // App mostra linhas de 01-05 (conforme print)
@@ -47,6 +50,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     name: 'Quina',
     totalNumbers: 80,
     gameSize: 5,
+    maxGameSize: 15,
     drawSize: 5,
     cols: 10,
     visualCols: 5,
@@ -59,6 +63,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     name: 'Lotomania',
     totalNumbers: 100,
     gameSize: 50,
+    maxGameSize: 50, // Review this if Lotomania allows more
     drawSize: 20, // CORREÇÃO: Sorteiam-se 20, joga-se 50
     cols: 10,
     visualCols: 5,

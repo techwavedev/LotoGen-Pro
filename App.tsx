@@ -5,6 +5,7 @@ import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended, genera
 import GameTicket from './components/GameTicket';
 import SettingsPanel from './components/SettingsPanel';
 import CombinatorialPanel from './components/CombinatorialPanel';
+import BetTypeSelector, { BetType } from './components/BetTypeSelector';
 import StatisticsPanel from './components/StatisticsPanel';
 import FilterExamplesModal from './components/FilterExamplesModal';
 import CookieConsent from './components/CookieConsent';
@@ -140,7 +141,17 @@ function App() {
 
   const handleLotteryChange = (id: LotteryId) => {
     setCurrentLotteryId(id);
+    setSelectedGameSize(LOTTERIES[id].gameSize);
   };
+  
+  // Bet Type State
+  const [betType, setBetType] = useState<BetType>('simple');
+  const [selectedGameSize, setSelectedGameSize] = useState<number>(lottery.gameSize);
+
+  // Sync game size when lottery changes
+  useEffect(() => {
+    setSelectedGameSize(lottery.gameSize);
+  }, [lottery]);
 
   // Auto-configure "Best Static Defaults" when lottery changes
   useEffect(() => {
@@ -292,12 +303,20 @@ function App() {
            setGeneratedGames(games);
            setLoadingMessage('');
         } else {
-            // Smart Random Mode
+            // Smart/Simple/Multiple Mode
             const targetCount = typeof countOverride === 'number' ? countOverride : gamesCount;
             setLoadingMessage(targetCount === 1 ? 'Gerando 1 palpite...' : 'Gerando combinações...');
             
             const hotNumbers = analysis ? analysis.hotNumbers : [];
-            const games = await generateGamesExtended(targetCount, history, config, lottery, hotNumbers, analysis || undefined);
+            
+            // For Surpresinha, we use minimal config (random)
+            // For Multiple, we pass the selectedGameSize
+            const effectiveConfig = betType === 'surpresinha' ? DEFAULT_EXTENDED_CONFIG : config;
+            const effectiveSize = betType === 'multiple' ? selectedGameSize : lottery.gameSize;
+            
+            const games = await generateGamesExtended(
+                targetCount, history, effectiveConfig, lottery, hotNumbers, analysis || undefined, effectiveSize
+            );
             
             setGeneratedGames(games);
             if (games.length < targetCount) {
@@ -552,15 +571,26 @@ function App() {
                 {/* Statistics Summary (if loaded) */}
                 <StatisticsPanel analysis={analysis} lottery={lottery} />
       
-                {/* Settings Section */}
-                <SettingsPanel 
-                  config={config} 
-                  setConfig={setConfig} 
-                  historyCount={history.length}
-                  onOpenExamples={() => setIsModalOpen(true)}
-                  lottery={lottery}
-                  extendedAnalysis={analysis}
+                {/* Bet Type Selector */}
+                <BetTypeSelector 
+                    currentType={betType}
+                    onTypeChange={setBetType}
+                    lottery={lottery}
+                    selectedGameSize={selectedGameSize}
+                    onGameSizeChange={setSelectedGameSize}
                 />
+
+                {/* Settings Section (Hidden for Surpresinha?) */}
+                {betType !== 'surpresinha' && (
+                  <SettingsPanel 
+                    config={config} 
+                    setConfig={setConfig} 
+                    historyCount={history.length}
+                    onOpenExamples={() => setIsModalOpen(true)}
+                    lottery={lottery}
+                    extendedAnalysis={analysis}
+                  />
+                )}
              </>
           ) : (
              <CombinatorialPanel 
