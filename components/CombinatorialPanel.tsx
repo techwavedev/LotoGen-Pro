@@ -192,60 +192,64 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
            >
               {Array.from({ length: lottery.totalNumbers }, (_, i) => i + 1).map(num => {
                   const isSelected = selection.includes(num);
-                  const intensity = heatStats?.getIntensity(num) || 0.3;
-                  const isHot = heatStats?.isHot(num);
-                  const isCold = heatStats?.isCold(num);
+                  const scoreData = compositeScores?.[num];
+                  const score = scoreData?.score || 0.5;
+                  const factors = scoreData?.factors || [];
                   
-                  // Heatmap shadow: hotter = more intense red shadow, colder = blue tint
-                  const heatShadow = heatStats 
-                      ? isHot 
-                          ? `0 0 ${8 + intensity * 12}px rgba(239,68,68,${0.3 + intensity * 0.5})` 
-                          : isCold 
-                              ? `0 0 ${6 + intensity * 8}px rgba(59,130,246,${0.2 + intensity * 0.3})`
-                              : `0 0 ${4 + intensity * 6}px rgba(0,0,0,${0.05 + intensity * 0.1})`
-                      : undefined;
+                  const colors = compositeScores ? getScoreColor(score) : null;
                   
                   return (
                       <button
                         key={num}
                         onClick={() => toggleNumber(num)}
-                        title={heatStats ? `Freq: ${(intensity * 100).toFixed(0)}%${isHot ? ' 🔥 Quente' : ''}${isCold ? ' ❄️ Frio' : ''}` : undefined}
+                        title={compositeScores 
+                            ? `${getScoreLabel(score)} (${(score * 100).toFixed(0)}%)\n${factors.join(', ') || 'Sem fatores especiais'}` 
+                            : 'Carregue histórico para ver recomendações'
+                        }
                         className={clsx(
-                            "aspect-square flex items-center justify-center font-bold text-sm sm:text-base rounded-lg transition-all transform hover:scale-105 relative",
+                            "aspect-square flex items-center justify-center font-bold text-sm sm:text-base rounded-lg transition-all transform hover:scale-110 relative",
                             isSelected 
-                               ? "text-white shadow-md ring-2 ring-offset-2 ring-transparent" 
-                               : "hover:bg-gray-100 border border-gray-100",
-                            !isSelected && isHot && "text-red-600 bg-red-50 border-red-200",
-                            !isSelected && isCold && "text-blue-600 bg-blue-50 border-blue-200",
-                            !isSelected && !isHot && !isCold && "bg-gray-50 text-gray-500"
+                               ? "text-white shadow-lg ring-2 ring-offset-2" 
+                               : "hover:brightness-95"
                         )}
                         style={{ 
-                            backgroundColor: isSelected ? lottery.color : undefined,
-                            boxShadow: !isSelected ? heatShadow : undefined
+                            backgroundColor: isSelected ? lottery.color : colors?.bg || 'rgba(249,250,251,1)',
+                            borderWidth: '2px',
+                            borderColor: isSelected ? lottery.color : colors?.border || 'rgba(229,231,235,1)',
+                            boxShadow: isSelected ? undefined : colors?.shadow || 'none',
+                            color: isSelected ? 'white' : score >= 0.6 ? 'rgb(22,163,74)' : score <= 0.4 ? 'rgb(239,68,68)' : 'rgb(107,114,128)'
                         }}
                       >
                           {num}
-                          {isHot && !isSelected && <Flame className="absolute -top-1 -right-1 w-3 h-3 text-orange-500" />}
-                          {isCold && !isSelected && <Snowflake className="absolute -top-1 -right-1 w-3 h-3 text-blue-400" />}
+                          {score >= 0.7 && !isSelected && <span className="absolute -top-1 -right-1 text-[10px]">⭐</span>}
+                          {score <= 0.3 && !isSelected && <span className="absolute -top-1 -right-1 text-[10px]">⚠️</span>}
                       </button>
                   );
               })}
            </div>
 
            {/* Legend */}
-           {heatStats && (
-              <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-500">
+           {compositeScores && (
+              <div className="flex flex-wrap items-center justify-center gap-3 mt-4 text-xs text-gray-500 p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-1">
-                      <Flame className="w-4 h-4 text-orange-500" />
-                      <span>Quentes (Top 10)</span>
+                      <div className="w-4 h-4 rounded border-2 border-green-500 bg-green-100"></div>
+                      <span>⭐ Recomendado</span>
                   </div>
                   <div className="flex items-center gap-1">
-                      <Snowflake className="w-4 h-4 text-blue-400" />
-                      <span>Frios (Bottom 10)</span>
+                      <div className="w-4 h-4 rounded border-2 border-yellow-500 bg-yellow-50"></div>
+                      <span>👍 Bom</span>
                   </div>
                   <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 rounded bg-gradient-to-r from-red-200 to-blue-200"></div>
-                      <span>Intensidade = Frequência</span>
+                      <div className="w-4 h-4 rounded border-2 border-gray-300 bg-gray-100"></div>
+                      <span>➖ Neutro</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 rounded border-2 border-orange-400 bg-orange-50"></div>
+                      <span>👎 Evitar</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                      <div className="w-4 h-4 rounded border-2 border-red-400 bg-red-50"></div>
+                      <span>⚠️ Baixo</span>
                   </div>
               </div>
            )}
