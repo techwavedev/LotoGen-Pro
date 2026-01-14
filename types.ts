@@ -106,8 +106,8 @@ export interface FilterConfig {
 }
 
 export const DEFAULT_CONFIG: FilterConfig = {
-  exclude15Hits: true,
-  exclude14Hits: true,
+  exclude15Hits: false,
+  exclude14Hits: false,
   exclude13Hits: false,
   exclude12Hits: false,
   exclude11Hits: false,
