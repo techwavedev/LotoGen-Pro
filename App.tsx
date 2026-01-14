@@ -597,6 +597,7 @@ function App() {
                 lottery={lottery} 
                 selection={combinatorialSelection}
                 setSelection={setCombinatorialSelection}
+                analysis={analysis}
              />
           )}
 
