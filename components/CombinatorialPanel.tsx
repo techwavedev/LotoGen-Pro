@@ -45,6 +45,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
   const getHeatStats = () => {
       if (!analysis || !analysis.allStats) return null;
       const counts = analysis.allStats.map(s => s.count);
+      const coldNumbers = analysis.leastFrequent?.slice(0, 10).map(s => s.number) || [];
       return {
           max: Math.max(...counts),
           min: Math.min(...counts),
@@ -56,7 +57,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
               return (stat.count - Math.min(...counts)) / range;
           },
           isHot: (num: number) => analysis.hotNumbers.includes(num),
-          isCold: (num: number) => analysis.coldNumbers?.includes(num) || false
+          isCold: (num: number) => coldNumbers.includes(num)
       };
   };
   const heatStats = getHeatStats();
