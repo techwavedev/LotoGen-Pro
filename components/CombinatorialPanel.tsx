@@ -159,34 +159,66 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
   return (
     <div className="space-y-6 animate-fade-in">
         <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
-           <div className="flex items-center gap-3 mb-4">
-               <div className="p-2 bg-indigo-100 rounded-lg text-indigo-700">
-                   <Grid className="w-6 h-6" />
+           <div className="flex items-center justify-between gap-3 mb-4">
+               <div className="flex items-center gap-3">
+                   <div className="p-2 bg-indigo-100 rounded-lg text-indigo-700">
+                       <Grid className="w-6 h-6" />
+                   </div>
+                   <div>
+                       <h2 className="text-xl font-bold text-gray-800">Seletor de Fechamento</h2>
+                       <p className="text-sm text-gray-500">
+                          {exclusionMode 
+                            ? 'Selecione números para EXCLUIR. Os restantes formarão o pool.' 
+                            : 'Selecione números para gerar todas as combinações possíveis.'}
+                       </p>
+                   </div>
                </div>
-               <div>
-                   <h2 className="text-xl font-bold text-gray-800">Seletor de Fechamento</h2>
-                   <p className="text-sm text-gray-500">Selecione os números para gerar todas as combinações possíveis (Desdobramento Total).</p>
-               </div>
+               
+               {/* Exclusion Mode Toggle (only for Lotomania) */}
+               {isLotomania && (
+                   <button
+                      onClick={() => { setExclusionMode(!exclusionMode); setSelection([]); }}
+                      className={clsx(
+                          "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors border-2",
+                          exclusionMode 
+                            ? "bg-red-50 border-red-300 text-red-700" 
+                            : "bg-green-50 border-green-300 text-green-700"
+                      )}
+                   >
+                      {exclusionMode ? <Ban className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                      {exclusionMode ? 'Modo: Excluir' : 'Modo: Incluir'}
+                   </button>
+               )}
            </div>
 
            {/* Stats Bar */}
            <div className="flex flex-wrap gap-4 mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
                <div className="flex-1">
-                   <div className="text-xs text-gray-500 uppercase font-semibold">Números Selecionados</div>
+                   <div className="text-xs text-gray-500 uppercase font-semibold">
+                      {exclusionMode ? '❌ Números Excluídos' : '✓ Números Selecionados'}
+                   </div>
                    <div className="text-2xl font-bold text-gray-800">
                       {selection.length} <span className="text-sm text-gray-400 font-normal">/ {lottery.totalNumbers}</span>
                    </div>
                </div>
+               {exclusionMode && (
+                   <div className="flex-1">
+                       <div className="text-xs text-gray-500 uppercase font-semibold">✓ Pool Ativo</div>
+                       <div className="text-2xl font-bold text-green-600">
+                          {activePool.length} <span className="text-sm text-gray-400 font-normal">números</span>
+                       </div>
+                   </div>
+               )}
                <div className="flex-1">
                    <div className="text-xs text-gray-500 uppercase font-semibold flex items-center gap-1">
                        Jogos Gerados
                        <Info className="w-3 h-3 text-gray-400" />
                    </div>
-                   <div className={clsx("text-2xl font-bold", totalCombinations > 1000 ? "text-orange-600" : "text-green-600")}>
-                      {totalCombinations.toLocaleString()}
+                   <div className={clsx("text-2xl font-bold", totalCombinations > 1000 ? "text-orange-600" : totalCombinations > 0 ? "text-green-600" : "text-gray-400")}>
+                      {totalCombinations > 0 ? totalCombinations.toLocaleString() : (activePool.length < lottery.gameSize ? `Precisa ${lottery.gameSize - activePool.length}+ números` : '0')}
                    </div>
                    <div className="text-xs text-gray-400">
-                       Combinacão {lottery.gameSize} a {lottery.gameSize}
+                       C({activePool.length}, {lottery.gameSize})
                    </div>
                </div>
                <div className="flex-1 border-l pl-4 border-gray-200">
