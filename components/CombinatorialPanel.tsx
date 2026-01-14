@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { LotteryDefinition, ExtendedHistoryAnalysis } from '../types';
 import clsx from 'clsx';
-import { Grid, MousePointerClick, Info, Flame, Snowflake } from 'lucide-react';
+import { Grid, MousePointerClick, Info, Flame, Snowflake, Ban, Check } from 'lucide-react';
 
 interface CombinatorialPanelProps {
   lottery: LotteryDefinition;
@@ -11,18 +11,22 @@ interface CombinatorialPanelProps {
 }
 
 const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, selection, setSelection, analysis }) => {
-  const toggleNumber = (num: number) => {
-    if (selection.includes(num)) {
-      setSelection(selection.filter(n => n !== num));
-    } else {
-      if (selection.length >= 21) {
-         alert('Limite de seguranca: Máximo de 21 números (para evitar travamento do navegador com >50k combinações).');
-         return;
-      }
-      setSelection([...selection, num].sort((a, b) => a - b));
-    }
-  };
-
+  // For Lotomania: use exclusion mode (select numbers to EXCLUDE)
+  const isLotomania = lottery.gameSize >= 50;
+  const [exclusionMode, setExclusionMode] = useState(isLotomania);
+  
+  // In exclusion mode: selection = numbers to EXCLUDE
+  // Active pool = all numbers EXCEPT selection
+  const activePool = exclusionMode 
+      ? Array.from({ length: lottery.totalNumbers }, (_, i) => i + 1).filter(n => !selection.includes(n))
+      : selection;
+  
+  // Dynamic limit based on mode
+  const MAX_EXCLUSIONS = 50; // Max numbers to exclude (leaves 50+ for pool)
+  const MAX_SELECTION = exclusionMode
+      ? MAX_EXCLUSIONS
+      : (lottery.gameSize >= 50 ? lottery.totalNumbers : Math.min(lottery.gameSize + 6, 21));
+  
   const combinationsCount = (n: number, k: number) => {
       if (k < 0 || k > n) return 0;
       if (k === 0 || k === n) return 1;
@@ -34,8 +38,21 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
       }
       return Math.round(res);
   };
+  
+  const toggleNumber = (num: number) => {
+    if (selection.includes(num)) {
+      setSelection(selection.filter(n => n !== num));
+    } else {
+      if (selection.length >= MAX_SELECTION) {
+         alert(`Limite: Máximo de ${MAX_SELECTION} números ${exclusionMode ? 'excluídos' : 'selecionados'}.`);
+         return;
+      }
+      setSelection([...selection, num].sort((a, b) => a - b));
+    }
+  };
 
-  const totalCombinations = combinationsCount(selection.length, lottery.gameSize);
+  // Calculate combinations based on active pool
+  const totalCombinations = combinationsCount(activePool.length, lottery.gameSize);
   const totalCost = totalCombinations * (lottery.basePrice || 0);
   
   // Calculate grid columns
