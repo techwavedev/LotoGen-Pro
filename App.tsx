@@ -26,6 +26,7 @@ function App() {
   const [gamesCount, setGamesCount] = useState<number>(5);
   const [mode, setMode] = useState<'smart' | 'combinatorial'>('smart');
   const [combinatorialSelection, setCombinatorialSelection] = useState<number[]>([]);
+  const [exclusionMode, setExclusionMode] = useState(false); // For Lotomania: select numbers to EXCLUDE
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [latestResult, setLatestResult] = useState<{ draw_number: number; numbers: string[]; draw_date: string } | null>(null);
@@ -299,7 +300,12 @@ function App() {
         if (mode === 'combinatorial') {
            setLoadingMessage('Gerando fechamento combinatório...');
            // Combinatorial Mode
-           const games = generateCombinatorialGames(combinatorialSelection, lottery);
+           // For exclusion mode: calculate active pool (all numbers EXCEPT selection)
+           const numbersForGeneration = exclusionMode
+               ? Array.from({ length: lottery.totalNumbers }, (_, i) => i + 1).filter(n => !combinatorialSelection.includes(n))
+               : combinatorialSelection;
+           
+           const games = generateCombinatorialGames(numbersForGeneration, lottery);
            setGeneratedGames(games);
            setLoadingMessage('');
         } else {
@@ -598,6 +604,8 @@ function App() {
                 selection={combinatorialSelection}
                 setSelection={setCombinatorialSelection}
                 analysis={analysis}
+                exclusionMode={exclusionMode}
+                setExclusionMode={setExclusionMode}
              />
           )}
 
