@@ -32,7 +32,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#930089',
     colorName: 'purple',
     downloadParam: 'lf',
-    basePrice: 3.00
+    basePrice: 3.50
   },
   megasena: {
     id: 'megasena',
@@ -46,7 +46,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#209869',
     colorName: 'green',
     downloadParam: 'ms',
-    basePrice: 5.00
+    basePrice: 6.00
   },
   quina: {
     id: 'quina',
@@ -60,7 +60,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#264987',
     colorName: 'blue',
     downloadParam: 'qi',
-    basePrice: 2.50
+    basePrice: 3.00
   },
   lotomania: {
     id: 'lotomania',
