@@ -561,11 +561,14 @@ function App() {
               </button>
               <button 
                  onClick={() => setMode('combinatorial')}
+                 disabled={lottery.gameSize >= 50}
+                 title={lottery.gameSize >= 50 ? 'Não disponível para Lotomania (50 números por jogo)' : undefined}
                  className={clsx(
                     "flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all",
                     mode === 'combinatorial' 
                       ? "text-white shadow-lg" 
-                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200",
+                    lottery.gameSize >= 50 && "opacity-50 cursor-not-allowed"
                  )}
                  style={mode === 'combinatorial' ? { backgroundColor: lottery.color } : {}}
               >
