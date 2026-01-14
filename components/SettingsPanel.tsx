@@ -134,7 +134,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     // Lotomania: 20 picks has few pairs. 50 picks has MANY.
     // Let's rely on the safeConsecutive heuristic if scale is large.
     const histConsecutiveScaled = Math.ceil(avgConsecutive * scaleRatio * scaleRatio); // Pairs scale quadratically approx
-    const finalConsecutive = scaleRatio > 1.5 ? safeConsecutive : (histConsecutiveScaled > 0 ? histConsecutiveScaled + 2 : safeConsecutive);
+    // For high density lotteries (Lotofacil/Lotomania), always prefer the wider safe limit to avoid blocking generation
+    const finalConsecutive = (scaleRatio > 1.5 || isHighDensity) ? safeConsecutive : (histConsecutiveScaled > 0 ? histConsecutiveScaled + 2 : safeConsecutive);
 
     // Historical Delay (applies to individual numbers, doesn't scale with game size)
     const avgDelay = extendedAnalysis.delayStats?.[0]?.avgDelay || 8;

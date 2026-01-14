@@ -614,7 +614,7 @@ export const generateGames = async (
 ): Promise<Game[]> => {
   const result: Game[] = [];
   let attempts = 0;
-  const MAX_ATTEMPTS = count * 5000; 
+  const MAX_ATTEMPTS = count * 20000; 
 
   const { lines: LINES, columns: COLUMNS } = getGridStructure(lottery);
   const hotSet = new Set(hotNumbers);
@@ -751,7 +751,7 @@ export const generateGamesExtended = async (
 ): Promise<Game[]> => {
   const result: Game[] = [];
   let attempts = 0;
-  const MAX_ATTEMPTS = count * 50000; // Increased to allow strict filters
+  const MAX_ATTEMPTS = count * 200000; // Increased to allow strict filters
 
   const { lines: LINES, columns: COLUMNS } = getGridStructure(lottery);
   const hotSet = new Set(hotNumbers);
