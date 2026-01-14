@@ -41,26 +41,103 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
   // Calculate grid columns
   const cols = Math.min(lottery.cols, 10); // Max 10 cols for better mobile view
 
-  // Heatmap logic
-  const getHeatStats = () => {
+  // Advanced Heatmap: Composite Score based on multiple factors
+  const getCompositeScores = () => {
       if (!analysis || !analysis.allStats) return null;
-      const counts = analysis.allStats.map(s => s.count);
+      
+      const scores: Record<number, { score: number; factors: string[] }> = {};
       const coldNumbers = analysis.leastFrequent?.slice(0, 10).map(s => s.number) || [];
-      return {
-          max: Math.max(...counts),
-          min: Math.min(...counts),
-          getIntensity: (num: number) => {
-              const stat = analysis.allStats.find(s => s.number === num);
-              if (!stat) return 0.3;
-              const range = Math.max(...counts) - Math.min(...counts);
-              if (range === 0) return 0.5;
-              return (stat.count - Math.min(...counts)) / range;
-          },
-          isHot: (num: number) => analysis.hotNumbers.includes(num),
-          isCold: (num: number) => coldNumbers.includes(num)
-      };
+      
+      // Get delay stats if available
+      const delayStats = (analysis as any).delayStats || [];
+      
+      // Get trend stats if available
+      const trendStats = (analysis as any).trendStats || {};
+      const recentHot = trendStats.recentHot || [];
+      const recentCold = trendStats.recentCold || [];
+      
+      // Frequency normalization
+      const counts = analysis.allStats.map(s => s.count);
+      const maxCount = Math.max(...counts);
+      const minCount = Math.min(...counts);
+      const countRange = maxCount - minCount || 1;
+      
+      for (let num = 1; num <= lottery.totalNumbers; num++) {
+          const stat = analysis.allStats.find(s => s.number === num);
+          const factors: string[] = [];
+          let score = 0.5; // Neutral baseline
+          
+          if (stat) {
+              // Factor 1: Frequency (0.3 weight) - higher is better
+              const freqScore = (stat.count - minCount) / countRange;
+              score += (freqScore - 0.5) * 0.3;
+              if (freqScore > 0.7) factors.push(`Alta freq (${stat.percentage}%)`);
+              
+              // Factor 2: Hot/Cold status (0.2 weight)
+              if (analysis.hotNumbers.includes(num)) {
+                  score += 0.15;
+                  factors.push('🔥 Top 10');
+              }
+              if (coldNumbers.includes(num)) {
+                  score -= 0.1;
+                  factors.push('❄️ Frio');
+              }
+              
+              // Factor 3: Delay (0.25 weight) - overdue numbers get bonus
+              const delayStat = delayStats.find((d: any) => d.number === num);
+              if (delayStat && delayStat.delay > 10) {
+                  const delayBonus = Math.min(delayStat.delay / 30, 0.25);
+                  score += delayBonus;
+                  factors.push(`⏰ ${delayStat.delay} sorteios`);
+              }
+              
+              // Factor 4: Recent Trend (0.15 weight)
+              if (recentHot.includes(num)) {
+                  score += 0.1;
+                  factors.push('📈 Tendência');
+              }
+              if (recentCold.includes(num)) {
+                  score -= 0.05;
+              }
+              
+              // Factor 5: Mathematical properties (0.1 weight)
+              const isPrime = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97].includes(num);
+              const isFibonacci = [1,2,3,5,8,13,21,34,55,89].includes(num);
+              const isEdge = num % lottery.cols === 1 || num % lottery.cols === 0;
+              
+              // Slight bonuses for variety (primes and fibonacci are often recommended)
+              if (isPrime) score += 0.02;
+              if (isFibonacci) score += 0.02;
+          }
+          
+          // Clamp score between 0 and 1
+          scores[num] = {
+              score: Math.max(0, Math.min(1, score)),
+              factors
+          };
+      }
+      
+      return scores;
   };
-  const heatStats = getHeatStats();
+  
+  const compositeScores = getCompositeScores();
+  
+  // Generate color from score (0 = red/avoid, 0.5 = neutral, 1 = green/recommended)
+  const getScoreColor = (score: number) => {
+      if (score >= 0.7) return { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.5)', shadow: `0 0 12px rgba(34,197,94,${score * 0.6})` };
+      if (score >= 0.55) return { bg: 'rgba(234,179,8,0.1)', border: 'rgba(234,179,8,0.4)', shadow: `0 0 8px rgba(234,179,8,${score * 0.4})` };
+      if (score >= 0.45) return { bg: 'rgba(156,163,175,0.1)', border: 'rgba(156,163,175,0.3)', shadow: 'none' };
+      if (score >= 0.3) return { bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.4)', shadow: `0 0 6px rgba(249,115,22,${(1-score) * 0.3})` };
+      return { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.4)', shadow: `0 0 8px rgba(239,68,68,${(1-score) * 0.4})` };
+  };
+  
+  const getScoreLabel = (score: number) => {
+      if (score >= 0.7) return '⭐ Recomendado';
+      if (score >= 0.55) return '👍 Bom';
+      if (score >= 0.45) return '➖ Neutro';
+      if (score >= 0.3) return '👎 Evitar';
+      return '⚠️ Baixo';
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
