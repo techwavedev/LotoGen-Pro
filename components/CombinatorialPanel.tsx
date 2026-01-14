@@ -35,6 +35,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
   };
 
   const totalCombinations = combinationsCount(selection.length, lottery.gameSize);
+  const totalCost = totalCombinations * (lottery.basePrice || 0);
   
   // Calculate grid columns
   const cols = Math.min(lottery.cols, 10); // Max 10 cols for better mobile view
@@ -69,8 +70,17 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, select
                       {totalCombinations.toLocaleString()}
                    </div>
                    <div className="text-xs text-gray-400">
-                       Combinacão {selection.length} tomados {lottery.gameSize} a {lottery.gameSize}
+                       Combinacão {lottery.gameSize} a {lottery.gameSize}
                    </div>
+               </div>
+               <div className="flex-1 border-l pl-4 border-gray-200">
+                    <div className="text-xs text-gray-500 uppercase font-semibold">Custo Total</div>
+                    <div className="text-2xl font-bold text-gray-800">
+                        {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
+                    <div className="text-xs text-gray-400">
+                        {totalCombinations} x {((lottery.basePrice || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </div>
                </div>
            </div>
 

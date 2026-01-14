@@ -16,6 +16,7 @@ export interface LotteryDefinition {
   color: string; // Hex color for UI
   colorName: string; // Tailwind color name approx
   downloadParam: string; // Parameter for asloterias.com.br download (l=XX)
+  basePrice: number; // Preço da aposta mínima (R$)
 }
 
 export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
@@ -30,7 +31,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     visualCols: 5,
     color: '#930089',
     colorName: 'purple',
-    downloadParam: 'lf'
+    downloadParam: 'lf',
+    basePrice: 3.00
   },
   megasena: {
     id: 'megasena',
@@ -43,7 +45,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     visualCols: 5, // App mostra linhas de 01-05 (conforme print)
     color: '#209869',
     colorName: 'green',
-    downloadParam: 'ms'
+    downloadParam: 'ms',
+    basePrice: 5.00
   },
   quina: {
     id: 'quina',
@@ -56,7 +59,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     visualCols: 5,
     color: '#264987',
     colorName: 'blue',
-    downloadParam: 'qi'
+    downloadParam: 'qi',
+    basePrice: 2.50
   },
   lotomania: {
     id: 'lotomania',
@@ -69,7 +73,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     visualCols: 5,
     color: '#F78100',
     colorName: 'orange',
-    downloadParam: 'lm'
+    downloadParam: 'lm',
+    basePrice: 3.00
   }
 };
 

@@ -101,7 +101,7 @@ const BetTypeSelector: React.FC<BetTypeSelectorProps> = ({
            <label className="block text-sm font-semibold text-gray-700 mb-2">
              Quantos números por jogo?
            </label>
-           <div className="flex flex-wrap gap-2">
+           <div className="flex flex-wrap gap-2 mb-3">
              {Array.from({ length: lottery.maxGameSize - lottery.gameSize }, (_, i) => lottery.gameSize + i + 1).map(size => (
                <button
                  key={size}
@@ -118,9 +118,42 @@ const BetTypeSelector: React.FC<BetTypeSelectorProps> = ({
                </button>
              ))}
            </div>
+           
+           {/* Price Calculation */}
+           {(() => {
+               // Combinations formula: n! / (k! * (n-k)!)
+               // But usually we just need to know how many "simple bets" it represents.
+               const combinations = (n: number, k: number) => {
+                  let res = 1;
+                  for(let i=1; i<=k; i++) res = res * (n - i + 1) / i;
+                  return Math.round(res); // Combinations of 'n' taken 'k' (lottery.gameSize) at a time? 
+                  // Wait. Multiple bet logic:
+                  // You pick 'selectedGameSize' numbers. The official game size is 'lottery.gameSize'.
+                  // The number of bets is C(selectedGameSize, lottery.gameSize).
+               };
+               
+               const combos = combinations(selectedGameSize, lottery.gameSize);
+               const totalCost = combos * (lottery.basePrice || 0);
+
+               return (
+                   <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex-1">
+                            <span className="text-xs text-gray-500 uppercase font-bold">Equivalente a</span>
+                            <div className="font-bold text-gray-800">{combos} apostas simples</div>
+                        </div>
+                        <div className="flex-1 border-l pl-3 border-gray-200">
+                             <span className="text-xs text-gray-500 uppercase font-bold">Custo Estimado</span>
+                             <div className="font-bold text-green-600 text-lg">
+                                {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                             </div>
+                        </div>
+                   </div>
+               );
+           })()}
+
            <p className="text-xs text-gray-500 mt-2">
              <Info className="w-3 h-3 inline mr-1" />
-             O custo da aposta aumenta com a quantidade de números.
+             O custo sobe porque você combina matematicamente mais jogos.
            </p>
         </div>
       )}
