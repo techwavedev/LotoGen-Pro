@@ -1062,6 +1062,10 @@ export const generateCombinatorialGames = (
   // Lotofacil 18 dezenas -> 816 jogos. 20 dezenas -> 15.504 (Ok). 21 (~54k) Limit.
   const MAX_COMBINATIONS = 50000;
   
+  // For Lotomania (gameSize=50), limit is much stricter because each game is HUGE
+  const MAX_LOTOMANIA_COMBINATIONS = 500; // 500 games of 50 numbers each = 25,000 numbers
+  const effectiveMax = lottery.gameSize >= 50 ? MAX_LOTOMANIA_COMBINATIONS : MAX_COMBINATIONS;
+  
   // Basic nCr check
   const n = selectedNumbers.length;
   const k = lottery.gameSize;
@@ -1069,9 +1073,27 @@ export const generateCombinatorialGames = (
   if (n < k) return [];
   if (n === k) return [selectedNumbers.sort((a,b)=>a-b)];
   
-  // Estimate combinations
-  // We won't implement BigInt factorial here for performance, just rough check
-  // if n > 21 and k=15, it's too big.
+  // Quick combinatorial estimate without full calculation
+  const estimateCombinations = (n: number, k: number): number => {
+      if (k < 0 || k > n) return 0;
+      if (k === 0 || k === n) return 1;
+      if (k > n - k) k = n - k; // Optimization: C(n,k) = C(n, n-k)
+      
+      let result = 1;
+      for (let i = 0; i < k; i++) {
+          result = result * (n - i) / (i + 1);
+          if (result > effectiveMax * 2) return result; // Early exit if too big
+      }
+      return Math.round(result);
+  };
+  
+  const estimated = estimateCombinations(n, k);
+  
+  if (estimated > effectiveMax) {
+      throw new Error(`Muitas combinações (~${estimated.toLocaleString()}). Máximo para ${lottery.name}: ${effectiveMax.toLocaleString()} jogos.`);
+  }
+  
+  // Lotofacil specific check (legacy)
   if (lottery.id === 'lotofacil' && n > 21) {
       throw new Error(`Selecione no máximo 21 números para evitar travamento (Geraria >50k jogos).`);
   }
@@ -1079,7 +1101,7 @@ export const generateCombinatorialGames = (
   // Generate
   const combos = getCombinations(selectedNumbers, k);
   
-  if (combos.length > MAX_COMBINATIONS) {
+  if (combos.length > effectiveMax) {
        throw new Error(`Muitas combinações (${combos.length}). Reduza a quantidade de números.`);
   }
   
