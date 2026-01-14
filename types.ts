@@ -178,6 +178,13 @@ export interface TrendStats {
   declining: number[];   // Caindo de frequência
 }
 
+// Análise de Ciclos
+export interface CycleStats {
+  missingNumbers: number[];
+  currentCycleLength: number;
+  lastCycleLength?: number;
+}
+
 // Análise de Repetição entre Sorteios
 export interface RepeatBetweenDrawsStats {
   avgRepeats: number;    // Média de repetições do sorteio anterior
@@ -197,6 +204,7 @@ export interface ExtendedHistoryAnalysis extends HistoryAnalysis {
   trendStats: TrendStats;
   repeatBetweenDrawsStats: RepeatBetweenDrawsStats;
   quadrantStats: QuadrantStats;
+  cycleStats?: CycleStats;
   
   // Mandel Stats (Opcionais pois dependem da implementação de análise)
   primeDistributionStats?: {
@@ -269,6 +277,9 @@ export interface ExtendedFilterConfig extends FilterConfig {
 
   useFibonacciFilter: boolean;
   minFibonacciNumbers: number;
+
+  // Cycle Strategy
+  useCycleFilter: boolean; // Force missing cycle numbers
 }
 
 // Default para novos filtros
@@ -303,6 +314,7 @@ export const DEFAULT_EXTENDED_CONFIG: ExtendedFilterConfig = {
   minAverageSpread: 2,
   useFibonacciFilter: true,
   minFibonacciNumbers: 1,
+  useCycleFilter: false,
 };
 
 export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {

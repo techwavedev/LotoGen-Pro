@@ -11,6 +11,7 @@ import {
   Hash,
   TrendingUp,
   Repeat,
+  RotateCcw,
   Snowflake,
 } from "lucide-react";
 import clsx from "clsx";
@@ -167,7 +168,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         sum: `Histórico (Ajustado): ~${sumAvgScaled.toFixed(0)}`,
         consecutive: `Padrão: Máx ${finalConsecutive}`,
         delay: `Histórico: média ${avgDelay.toFixed(1)} concursos`,
-        repeat: `Histórico (Ajustado): ~${avgRepeatsScaled.toFixed(1)}`
+        repeat: `Histórico (Ajustado): ~${avgRepeatsScaled.toFixed(1)}`,
+        cycle: `Faltam ${extendedAnalysis.cycleStats?.missingNumbers.length || '?'} números no ciclo atual`
       }
     };
   }, [extendedAnalysis, staticRec, lottery]);
@@ -920,6 +922,44 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 ⚡ Aplicar Todos os Filtros Mandel Recomendados
               </button>
             </div>
+          </div>
+
+          {/* New Cycle Filter Section */}
+          <div className="space-y-4 p-4 rounded-lg md:col-span-2 lg:col-span-3 border bg-pink-50 border-pink-100">
+             <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-pink-700">
+                   <RotateCcw className="w-4 h-4" />
+                   Ciclo das Dezenas
+                </h3>
+             </div>
+             
+             <div className="bg-white p-3 rounded-lg border border-pink-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.useCycleFilter || false}
+                        onChange={() => toggle("useCycleFilter")}
+                        className="w-4 h-4 rounded text-pink-500 focus:ring-pink-500"
+                        style={{ accentColor: lottery.color }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">Forçar Fechamento de Ciclo</span>
+                    </label>
+                    <p className="text-xs text-gray-500 ml-6 mt-1">
+                      O gerador tentará incluir os números que faltam para fechar o ciclo atual.
+                    </p>
+                </div>
+                {extendedAnalysis?.cycleStats && (
+                  <div className="text-right">
+                     <div className="text-xs font-bold text-pink-700">
+                        {extendedAnalysis.cycleStats.missingNumbers.length} números faltantes
+                     </div>
+                     <div className="text-[10px] text-pink-500">
+                        {extendedAnalysis.cycleStats.missingNumbers.join(', ')}
+                     </div>
+                  </div>
+                )}
+             </div>
           </div>
       </div>
     </div>

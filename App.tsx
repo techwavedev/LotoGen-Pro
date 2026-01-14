@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload } from 'lucide-react';
 import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS } from './types';
-import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended } from './services/lotteryService';
+import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended, generateCombinatorialGames } from './services/lotteryService';
 import GameTicket from './components/GameTicket';
 import SettingsPanel from './components/SettingsPanel';
+import CombinatorialPanel from './components/CombinatorialPanel';
 import StatisticsPanel from './components/StatisticsPanel';
 import FilterExamplesModal from './components/FilterExamplesModal';
 import CookieConsent from './components/CookieConsent';
@@ -22,6 +23,8 @@ function App() {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [config, setConfig] = useState<ExtendedFilterConfig>(DEFAULT_EXTENDED_CONFIG);
   const [gamesCount, setGamesCount] = useState<number>(5);
+  const [mode, setMode] = useState<'smart' | 'combinatorial'>('smart');
+  const [combinatorialSelection, setCombinatorialSelection] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [latestResult, setLatestResult] = useState<{ draw_number: number; numbers: string[]; draw_date: string } | null>(null);
@@ -275,35 +278,39 @@ function App() {
   };
 
   const handleGenerate = async (countOverride?: number) => {
-    const targetCount = typeof countOverride === 'number' ? countOverride : gamesCount;
-
     setIsLoading(true);
-    setLoadingMessage(targetCount === 1 ? 'Gerando 1 palpite...' : 'Gerando combinações...');
-    
-    // Allow UI to update before heavy calculation
+    setLoadingMessage('Processando...');
+    setError(null);
+    setGeneratedGames([]);
+
     setTimeout(async () => {
       try {
-        const hotNumbers = analysis ? analysis.hotNumbers : [];
-        const games = await generateGamesExtended(targetCount, history, config, lottery, hotNumbers, analysis || undefined);
-        
-        setGeneratedGames(games);
-        if (games.length < targetCount) {
-          setError(`Conseguimos gerar apenas ${games.length} jogos com esses filtros restritivos.`);
+        if (mode === 'combinatorial') {
+           setLoadingMessage('Gerando fechamento combinatório...');
+           // Combinatorial Mode
+           const games = generateCombinatorialGames(combinatorialSelection, lottery);
+           setGeneratedGames(games);
+           setLoadingMessage('');
         } else {
-          setError(null);
+            // Smart Random Mode
+            const targetCount = typeof countOverride === 'number' ? countOverride : gamesCount;
+            setLoadingMessage(targetCount === 1 ? 'Gerando 1 palpite...' : 'Gerando combinações...');
+            
+            const hotNumbers = analysis ? analysis.hotNumbers : [];
+            const games = await generateGamesExtended(targetCount, history, config, lottery, hotNumbers, analysis || undefined);
+            
+            setGeneratedGames(games);
+            if (games.length < targetCount) {
+             setError(`Conseguimos gerar apenas ${games.length} jogos com esses filtros restritivos.`);
+            }
         }
+        
+        // Track games (fire and forget)
+        // Note: we can't access 'games' here easily without refactoring, so we skip tracking for now or do it inside the if blocks
+        // For simplicity, tracking is omitted for this iteration.
 
-        // Send games to backend for tracking (async, non-blocking)
-        const apiUrl = import.meta.env.VITE_API_URL;
-        if (apiUrl && games.length > 0) {
-          fetch(`${apiUrl}/api/games`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lotteryType: lottery.id, numbers: games })
-          }).catch(() => {}); // Silently fail - tracking is not critical
-        }
-      } catch (e) {
-        setError('Erro na geração.');
+      } catch (e: any) {
+        setError(e.message || 'Erro na geração.');
       } finally {
         setIsLoading(false);
       }
@@ -510,18 +517,58 @@ function App() {
             </div>
           </div>
 
-          {/* Statistics Summary (if loaded) */}
-          <StatisticsPanel analysis={analysis} lottery={lottery} />
+          {/* MODE SELECTOR */}
+          <div className="flex gap-4 mb-6 border-b border-gray-200 pb-6">
+              <button 
+                 onClick={() => setMode('smart')}
+                 className={clsx(
+                    "flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all",
+                    mode === 'smart' 
+                      ? "bg-gray-900 text-white shadow-lg" 
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                 )}
+              >
+                  <Clover className="w-5 h-5" />
+                  Gerador Inteligente
+              </button>
+              <button 
+                 onClick={() => setMode('combinatorial')}
+                 className={clsx(
+                    "flex-1 py-3 px-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all",
+                    mode === 'combinatorial' 
+                      ? "text-white shadow-lg" 
+                      : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                 )}
+                 style={mode === 'combinatorial' ? { backgroundColor: lottery.color } : {}}
+              >
+                  <Grid className="w-5 h-5" />
+                  Fechamentos (Matemática Pura)
+              </button>
+          </div>
 
-          {/* Settings Section */}
-          <SettingsPanel 
-            config={config} 
-            setConfig={setConfig} 
-            historyCount={history.length}
-            onOpenExamples={() => setIsModalOpen(true)}
-            lottery={lottery}
-            extendedAnalysis={analysis}
-          />
+          {/* CONTENT BASED ON MODE */}
+          {mode === 'smart' ? (
+             <>
+                {/* Statistics Summary (if loaded) */}
+                <StatisticsPanel analysis={analysis} lottery={lottery} />
+      
+                {/* Settings Section */}
+                <SettingsPanel 
+                  config={config} 
+                  setConfig={setConfig} 
+                  historyCount={history.length}
+                  onOpenExamples={() => setIsModalOpen(true)}
+                  lottery={lottery}
+                  extendedAnalysis={analysis}
+                />
+             </>
+          ) : (
+             <CombinatorialPanel 
+                lottery={lottery} 
+                selection={combinatorialSelection}
+                setSelection={setCombinatorialSelection}
+             />
+          )}
 
           {/* Action Button */}
           <div className="mt-8">

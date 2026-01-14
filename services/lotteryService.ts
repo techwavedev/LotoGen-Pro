@@ -2,7 +2,7 @@ import { read, utils } from 'xlsx';
 import { 
   Game, FilterConfig, HistoryAnalysis, NumberStat, BalanceStat, RepetitionStats, LotteryDefinition,
   DelayStats, SumRangeStats, ConsecutiveStats, TrendStats, RepeatBetweenDrawsStats, QuadrantStats,
-  ExtendedHistoryAnalysis, ExtendedFilterConfig
+  ExtendedHistoryAnalysis, ExtendedFilterConfig, CycleStats
 } from '../types';
 
 // Cache for Primes to avoid recalculating
@@ -498,6 +498,47 @@ export const analyzeQuadrants = (history: Game[], lottery: LotteryDefinition): Q
 
 const FIBONACCI_SET = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55, 89]);
 
+// 9. CYCLE ANALYSIS
+export const analyzeCycles = (history: Game[], lottery: LotteryDefinition): CycleStats => {
+  const allNumbers = new Set<number>();
+  for(let i=1; i<=lottery.totalNumbers; i++) allNumbers.add(i);
+  
+  const missing = new Set(allNumbers);
+  let cycleLength = 0;
+  
+  // Iterate backwards from most recent
+  for (let i = history.length - 1; i >= 0; i--) {
+     const game = history[i];
+     cycleLength++;
+     
+     game.forEach(n => missing.delete(n));
+     
+     if (missing.size === 0) {
+         // Cycle closed here
+         break;
+     }
+  }
+  
+  // If cycle is closed exactly at the last game, we start a NEW cycle
+  if (missing.size === 0 && cycleLength > 0) {
+      // Logic for new cycle: all numbers are missing again, length is 0 (or 1 if we count the next draw?)
+      // Actually standard cycle analysis: if it closed, the NEXT draw is step 1 of new cycle.
+      // But here we are analyzing correct CURRENT status.
+      // If missing.size is 0, it means the cycle closed on the very last draw.
+      // So the current open cycle has length 0 and ALL numbers missing.
+      return {
+          missingNumbers: Array.from(allNumbers).sort((a,b)=>a-b),
+          currentCycleLength: 0,
+          lastCycleLength: cycleLength
+      };
+  }
+
+  return {
+    missingNumbers: Array.from(missing).sort((a, b) => a - b),
+    currentCycleLength: cycleLength
+  };
+};
+
 // 8. HELPERS FOR MANDEL STATS
 const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
   let totalPrimes = 0;
@@ -580,6 +621,7 @@ export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefiniti
     trendStats: analyzeTrends(history, lottery),
     repeatBetweenDrawsStats: analyzeRepeats(history),
     quadrantStats: analyzeQuadrants(history, lottery),
+    cycleStats: analyzeCycles(history, lottery),
     
     // Inject Mandel Stats
     primeDistributionStats: mandelStats.primeDistributionStats,
@@ -770,6 +812,9 @@ export const generateGamesExtended = async (
   
   // Last draw for repeat filter
   const lastDraw = history.length > 0 ? new Set(history[history.length - 1]) : new Set<number>();
+  
+  // Cycle Missing
+  const missingCycleNumbers = new Set(extendedAnalysis?.cycleStats?.missingNumbers || []);
 
   while (result.length < count && attempts < MAX_ATTEMPTS) {
     attempts++;
@@ -912,6 +957,30 @@ export const generateGamesExtended = async (
     }
     if (!isValid) continue;
 
+    // 9. CYCLE FILTER - Forçar números do ciclo
+    if (config.useCycleFilter && missingCycleNumbers.size > 0) {
+         // Logic: Ensure ALL missing numbers are present? 
+         // Or at least SOME? "Closing the cycle" strategy usually implies betting on the missing ones.
+         // Let's enforce that ALL missing numbers (if fit in game) must be present to "Attempt to close".
+         // Use case: Lotofacil, 3 missing. You want games containing those 3.
+         
+         const missingCount = missingCycleNumbers.size;
+         // If missing count > gameSize, impossible to include all (unlikely).
+         
+         if (missingCount <= 3) {
+             // For small missing sets, force ALL of them (Strong Strategy)
+             const hasAll = Array.from(missingCycleNumbers).every(n => candidate.includes(n));
+             if (!hasAll) isValid = false;
+         } else {
+             // For large missing sets (start of cycle), force at least 2 or 3?
+             // Actually, usually users turn this on ONLY at the END of the cycle.
+             // Let's stick to "Include ALL missing numbers" as the feature definition "Fechar Ciclo".
+             const hasAll = Array.from(missingCycleNumbers).every(n => candidate.includes(n));
+             if (!hasAll) isValid = false;
+         }
+    }
+    if (!isValid) continue;
+
     // ============ HISTORICAL DATA FILTERS ============
     if (history.length > 0) {
       const matchLimit = lottery.drawSize;
@@ -945,4 +1014,51 @@ export const generateGamesExtended = async (
   }
 
   return result;
+  return result;
+};
+
+// ============ COMBINATORIAL GENERATOR (FECHAMENTOS) ============
+
+function getCombinations<T>(arr: T[], k: number): T[][] {
+    if (k === 0) return [[]];
+    if (arr.length === 0) return [];
+    
+    const [first, ...rest] = arr;
+    
+    const withFirst = getCombinations(rest, k - 1).map(c => [first, ...c]);
+    const withoutFirst = getCombinations(rest, k);
+    
+    return [...withFirst, ...withoutFirst];
+}
+
+export const generateCombinatorialGames = (
+  selectedNumbers: number[],
+  lottery: LotteryDefinition
+): Game[] => {
+  // Hard limit to prevent browser crash
+  // Lotofacil 18 dezenas -> 816 jogos. 20 dezenas -> 15.504 (Ok). 21 (~54k) Limit.
+  const MAX_COMBINATIONS = 50000;
+  
+  // Basic nCr check
+  const n = selectedNumbers.length;
+  const k = lottery.gameSize;
+  
+  if (n < k) return [];
+  if (n === k) return [selectedNumbers.sort((a,b)=>a-b)];
+  
+  // Estimate combinations
+  // We won't implement BigInt factorial here for performance, just rough check
+  // if n > 21 and k=15, it's too big.
+  if (lottery.id === 'lotofacil' && n > 21) {
+      throw new Error(`Selecione no máximo 21 números para evitar travamento (Geraria >50k jogos).`);
+  }
+  
+  // Generate
+  const combos = getCombinations(selectedNumbers, k);
+  
+  if (combos.length > MAX_COMBINATIONS) {
+       throw new Error(`Muitas combinações (${combos.length}). Reduza a quantidade de números.`);
+  }
+  
+  return combos.map(c => c.sort((a,b) => a-b));
 };
