@@ -152,6 +152,9 @@ function App() {
   // Sync game size when lottery changes
   useEffect(() => {
     setSelectedGameSize(lottery.gameSize);
+    // Auto-enable exclusion mode for Lotomania (gameSize >= 50)
+    setExclusionMode(lottery.gameSize >= 50);
+    setCombinatorialSelection([]); // Clear selection when lottery changes
   }, [lottery]);
 
   // Auto-configure "Best Static Defaults" when lottery changes
