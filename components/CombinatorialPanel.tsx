@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { LotteryDefinition, ExtendedHistoryAnalysis } from '../types';
 import clsx from 'clsx';
 import { Grid, MousePointerClick, Info, Flame, Snowflake, Ban, Check } from 'lucide-react';
@@ -8,12 +8,15 @@ interface CombinatorialPanelProps {
   selection: number[];
   setSelection: (numbers: number[]) => void;
   analysis?: ExtendedHistoryAnalysis | null;
+  exclusionMode: boolean;
+  setExclusionMode: (mode: boolean) => void;
 }
 
-const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ lottery, selection, setSelection, analysis }) => {
+const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ 
+    lottery, selection, setSelection, analysis, exclusionMode, setExclusionMode 
+}) => {
   // For Lotomania: use exclusion mode (select numbers to EXCLUDE)
   const isLotomania = lottery.gameSize >= 50;
-  const [exclusionMode, setExclusionMode] = useState(isLotomania);
   
   // In exclusion mode: selection = numbers to EXCLUDE
   // Active pool = all numbers EXCEPT selection
