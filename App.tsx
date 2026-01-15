@@ -37,8 +37,9 @@ function App() {
   const downloadFormRef = useRef<HTMLFormElement>(null);
   const apiUrl = import.meta.env.VITE_API_URL;
 
-  // Fetch winners count on mount
+  // Fetch winners count on mount and track session
   useEffect(() => {
+    analytics.trackSessionStart();
     if (apiUrl) {
       fetch(`${apiUrl}/api/stats/winners`)
         .then(res => res.ok ? res.json() : null)
