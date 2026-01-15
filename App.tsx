@@ -313,6 +313,7 @@ function App() {
            const games = generateCombinatorialGames(numbersForGeneration, lottery);
            setGeneratedGames(games);
            setLoadingMessage('');
+           analytics.trackGenerateGames({ lottery: lottery.id, mode: 'combinatorial', count: games.length });
         } else {
             // Smart/Simple/Multiple Mode
             const targetCount = typeof countOverride === 'number' ? countOverride : gamesCount;
@@ -330,6 +331,7 @@ function App() {
             );
             
             setGeneratedGames(games);
+            analytics.trackGenerateGames({ lottery: lottery.id, mode: 'smart', count: games.length, betType });
             if (games.length < targetCount) {
              setError(`Conseguimos gerar apenas ${games.length} jogos com esses filtros restritivos.`);
             }
