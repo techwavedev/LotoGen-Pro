@@ -1,0 +1,9 @@
+# LotoGen Pro - robots.txt
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://lotogen.n2flow.tech/sitemap.xml
+
+# Disallow admin/API paths if any
+Disallow: /api/

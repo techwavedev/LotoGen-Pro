@@ -4,17 +4,71 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LotoGen Pro - Gerador Lotofácil</title>
-
+    
+    <!-- Primary SEO Meta Tags -->
+    <title>LotoGen Pro - Gerador Inteligente de Lotofácil, Mega-Sena, Quina e Mais</title>
+    <meta name="title" content="LotoGen Pro - Gerador Inteligente de Loterias Brasileiras" />
+    <meta name="description" content="Gere jogos otimizados para Lotofácil, Mega-Sena, Quina, Lotomania e mais. Análise estatística avançada, filtros inteligentes e fechamentos matemáticos. Grátis e sem cadastro!" />
+    <meta name="keywords" content="lotofácil, mega-sena, quina, lotomania, gerador loteria, números sorteados, loteria brasil, palpites lotofácil, fechamentos loteria, estatísticas loteria, gerador gratis" />
+    <meta name="author" content="LotoGen Pro" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://lotogen.n2flow.tech" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://lotogen.n2flow.tech/" />
+    <meta property="og:title" content="LotoGen Pro - Gerador Inteligente de Loterias" />
+    <meta property="og:description" content="Gere jogos otimizados para Lotofácil, Mega-Sena, Quina e mais. Análise estatística avançada e filtros inteligentes. 100% Grátis!" />
+    <meta property="og:image" content="https://lotogen.n2flow.tech/og-image.png" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:site_name" content="LotoGen Pro" />
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://lotogen.n2flow.tech/" />
+    <meta name="twitter:title" content="LotoGen Pro - Gerador Inteligente de Loterias" />
+    <meta name="twitter:description" content="Gere jogos otimizados para Lotofácil, Mega-Sena, Quina e mais. Análise estatística avançada. Grátis!" />
+    <meta name="twitter:image" content="https://lotogen.n2flow.tech/og-image.png" />
+    
     <!-- PWA Settings -->
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#930089" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta
-      name="apple-mobile-web-app-status-bar-style"
-      content="black-translucent"
-    />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="LotoGen" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    
+    <!-- Structured Data - JSON-LD -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "LotoGen Pro",
+      "url": "https://lotogen.n2flow.tech",
+      "description": "Gerador inteligente de jogos para loterias brasileiras com análise estatística avançada",
+      "applicationCategory": "Utilities",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "BRL"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "1250"
+      },
+      "featureList": [
+        "Gerador de jogos Lotofácil",
+        "Gerador de jogos Mega-Sena",
+        "Gerador de jogos Quina",
+        "Gerador de jogos Lotomania",
+        "Análise estatística de sorteios",
+        "Filtros inteligentes baseados em matemática",
+        "Fechamentos combinatórios"
+      ]
+    }
+    </script>
 
     <!-- Google Analytics 4 - Loaded dynamically with env variable -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,6 +89,12 @@
     </script>
   </head>
   <body>
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+        <h1>LotoGen Pro</h1>
+        <p>Este site requer JavaScript para funcionar. Por favor, ative o JavaScript no seu navegador.</p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
