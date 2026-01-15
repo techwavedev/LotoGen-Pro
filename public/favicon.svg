@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="cloverGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4ade80;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16a34a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Four leaf clover -->
+  <g fill="url(#cloverGrad)">
+    <!-- Top leaf -->
+    <ellipse cx="32" cy="16" rx="10" ry="12" transform="rotate(0 32 32)"/>
+    <!-- Right leaf -->
+    <ellipse cx="48" cy="32" rx="10" ry="12" transform="rotate(90 48 32)"/>
+    <!-- Bottom leaf -->
+    <ellipse cx="32" cy="48" rx="10" ry="12" transform="rotate(0 32 32)"/>
+    <!-- Left leaf -->
+    <ellipse cx="16" cy="32" rx="10" ry="12" transform="rotate(90 16 32)"/>
+  </g>
+  <!-- Center circle -->
+  <circle cx="32" cy="32" r="6" fill="#15803d"/>
+  <!-- Stem -->
+  <path d="M32 38 L32 58 Q32 62 36 64" stroke="#15803d" stroke-width="4" fill="none" stroke-linecap="round"/>
+</svg>
