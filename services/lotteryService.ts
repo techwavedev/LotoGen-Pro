@@ -988,24 +988,27 @@ export const generateGamesExtended = async (
 
     // 9. CYCLE FILTER - Forçar números do ciclo
     if (config.useCycleFilter && missingCycleNumbers.size > 0) {
-         // Logic: Ensure ALL missing numbers are present? 
-         // Or at least SOME? "Closing the cycle" strategy usually implies betting on the missing ones.
-         // Let's enforce that ALL missing numbers (if fit in game) must be present to "Attempt to close".
-         // Use case: Lotofacil, 3 missing. You want games containing those 3.
-         
          const missingCount = missingCycleNumbers.size;
-         // If missing count > gameSize, impossible to include all (unlikely).
+         const gameSize = lottery.gameSize;
+         
+         // Calculate how many missing numbers we should require based on how many are missing
+         // If few missing (1-3): require ALL (strong strategy to close cycle)
+         // If more missing: require a reasonable subset proportional to game size
+         
+         const missingInCandidate = candidate.filter(n => missingCycleNumbers.has(n)).length;
          
          if (missingCount <= 3) {
              // For small missing sets, force ALL of them (Strong Strategy)
-             const hasAll = Array.from(missingCycleNumbers).every(n => candidate.includes(n));
-             if (!hasAll) isValid = false;
+             if (missingInCandidate < missingCount) isValid = false;
+         } else if (missingCount <= gameSize / 2) {
+             // For medium missing sets, require at least half of them
+             const requiredCount = Math.max(2, Math.floor(missingCount / 2));
+             if (missingInCandidate < requiredCount) isValid = false;
          } else {
-             // For large missing sets (start of cycle), force at least 2 or 3?
-             // Actually, usually users turn this on ONLY at the END of the cycle.
-             // Let's stick to "Include ALL missing numbers" as the feature definition "Fechar Ciclo".
-             const hasAll = Array.from(missingCycleNumbers).every(n => candidate.includes(n));
-             if (!hasAll) isValid = false;
+             // For large missing sets (start of new cycle), require at least 2-3
+             // This is lenient because there are many numbers to choose from
+             const requiredCount = Math.min(3, Math.floor(gameSize * 0.2));
+             if (missingInCandidate < requiredCount) isValid = false;
          }
     }
     if (!isValid) continue;
