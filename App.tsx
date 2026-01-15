@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload } from 'lucide-react';
 import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS } from './types';
 import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended, generateCombinatorialGames } from './services/lotteryService';
+import * as analytics from './utils/analytics';
 import GameTicket from './components/GameTicket';
 import SettingsPanel from './components/SettingsPanel';
 import CombinatorialPanel from './components/CombinatorialPanel';
@@ -143,6 +144,7 @@ function App() {
   const handleLotteryChange = (id: LotteryId) => {
     setCurrentLotteryId(id);
     setSelectedGameSize(LOTTERIES[id].gameSize);
+    analytics.trackLotteryChange(id, LOTTERIES[id].name);
   };
   
   // Bet Type State
