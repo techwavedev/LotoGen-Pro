@@ -925,7 +925,8 @@ export const generateGamesExtended = async (
     // ============ NEW ADVANCED FILTERS ============
 
     // 3. DELAY FILTER - Números Atrasados
-    if (config.useDelayFilter && delayedNumbersSet.size > 0) {
+    // Only apply if there are enough delayed numbers to satisfy the requirement
+    if (config.useDelayFilter && delayedNumbersSet.size >= config.minDelayedNumbers) {
       const delayedInGame = candidate.filter(n => delayedNumbersSet.has(n)).length;
       if (delayedInGame < config.minDelayedNumbers) {
         isValid = false;
