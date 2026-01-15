@@ -97,15 +97,15 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     // CRITICAL: Scale stats if gameSize > drawSize (e.g. Lotomania)
     const scaleRatio = lottery.gameSize / (lottery.drawSize || lottery.gameSize);
     
-    // Primes
+    // Primes - add buffer to make less restrictive
     const hPrimes = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
-    const primeMin = Math.floor(hPrimes[0] * scaleRatio);
-    const primeMax = Math.ceil(hPrimes[1] * scaleRatio);
+    const primeMin = Math.max(1, Math.floor(hPrimes[0] * scaleRatio) - 1); // -1 for flexibility
+    const primeMax = Math.ceil(hPrimes[1] * scaleRatio) + 2; // +2 for flexibility
 
-    // Edges
+    // Edges - add buffer to make less restrictive
     const hEdges = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
-    const edgeMin = Math.floor(hEdges[0] * scaleRatio);
-    const edgeMax = Math.ceil(hEdges[1] * scaleRatio);
+    const edgeMin = Math.max(2, Math.floor(hEdges[0] * scaleRatio) - 2); // -2 for flexibility
+    const edgeMax = Math.ceil(hEdges[1] * scaleRatio) + 2; // +2 for flexibility
 
     // Decades (Coverage tends to saturate, so don't scale linearly beyond total decades)
     const hDecadeAvg = extendedAnalysis.decadeDistributionStats?.avgDecadesCovered || staticRec.decades.min;
@@ -123,11 +123,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
     const hFib = extendedAnalysis.fibonacciStats?.recommendedRange || [staticRec.fibonacci.min, staticRec.fibonacci.min + 2];
     const fibMin = Math.floor(hFib[0] * scaleRatio);
 
-    // Stats
+    // Stats - widen sum range for more flexibility
     const sumAvgHist = extendedAnalysis.sumStats?.averageSum || expectedSum;
     const sumAvgScaled = sumAvgHist * scaleRatio;
-    const sumMin = Math.floor(sumAvgScaled * 0.85);
-    const sumMax = Math.ceil(sumAvgScaled * 1.15);
+    const sumMin = Math.floor(sumAvgScaled * 0.75); // Was 0.85, now 0.75 for more flexibility
+    const sumMax = Math.ceil(sumAvgScaled * 1.25); // Was 1.15, now 1.25 for more flexibility
     
     // Consecutive
     const avgConsecutive = extendedAnalysis.consecutiveStats?.avgPairs || 0;
