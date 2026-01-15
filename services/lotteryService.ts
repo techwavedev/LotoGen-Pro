@@ -503,37 +503,43 @@ export const analyzeCycles = (history: Game[], lottery: LotteryDefinition): Cycl
   const allNumbers = new Set<number>();
   for(let i=1; i<=lottery.totalNumbers; i++) allNumbers.add(i);
   
-  const missing = new Set(allNumbers);
-  let cycleLength = 0;
+  // Find where the last complete cycle ended (if any)
+  // Then calculate missing numbers for the CURRENT (incomplete) cycle
   
-  // Iterate backwards from most recent
+  let lastCycleClosedAt = -1; // Index where last cycle closed
+  let lastCycleLength = 0;
+  
+  // First pass: find where the last cycle closed (working backwards)
+  const missingFirstPass = new Set(allNumbers);
   for (let i = history.length - 1; i >= 0; i--) {
-     const game = history[i];
-     cycleLength++;
-     
-     game.forEach(n => missing.delete(n));
-     
-     if (missing.size === 0) {
-         // Cycle closed here
-         break;
-     }
+    const game = history[i];
+    game.forEach(n => missingFirstPass.delete(n));
+    
+    if (missingFirstPass.size === 0) {
+      // Cycle closed at position i
+      lastCycleClosedAt = i;
+      lastCycleLength = history.length - i;
+      break;
+    }
   }
   
-  // If cycle is closed exactly at the last game, we start a NEW cycle
-  if (missing.size === 0 && cycleLength > 0) {
-      // Cycle closed in the last draw. 
-      // For the purpose of "Closing the Cycle", there are NO numbers missing (it's done).
-      // Returning all numbers caused the filter to try to force ALL 25 numbers, which is impossible.
-      return {
-          missingNumbers: [], 
-          currentCycleLength: 0,
-          lastCycleLength: cycleLength
-      };
+  // Second pass: calculate missing numbers for the CURRENT cycle
+  // Start from AFTER the last complete cycle (or from the beginning if no complete cycle found)
+  const currentCycleMissing = new Set(allNumbers);
+  const startIndex = lastCycleClosedAt >= 0 ? lastCycleClosedAt + 1 : 0;
+  
+  // Only look at draws AFTER the cycle closed
+  for (let i = startIndex; i < history.length; i++) {
+    const game = history[i];
+    game.forEach(n => currentCycleMissing.delete(n));
   }
-
+  
+  const currentCycleLength = history.length - startIndex;
+  
   return {
-    missingNumbers: Array.from(missing).sort((a, b) => a - b),
-    currentCycleLength: cycleLength
+    missingNumbers: Array.from(currentCycleMissing).sort((a, b) => a - b),
+    currentCycleLength: currentCycleLength,
+    lastCycleLength: lastCycleLength > 0 ? lastCycleLength : undefined
   };
 };
 
