@@ -315,10 +315,27 @@ function App() {
                ? Array.from({ length: lottery.totalNumbers }, (_, i) => i + 1).filter(n => !combinatorialSelection.includes(n))
                : combinatorialSelection;
            
-           const games = generateCombinatorialGames(numbersForGeneration, lottery);
-           setGeneratedGames(games);
-           setLoadingMessage('');
-           analytics.trackGenerateGames({ lottery: lottery.id, mode: 'combinatorial', count: games.length });
+           // Use the new covering design service based on config
+           try {
+             const result = generateCoveringDesign(numbersForGeneration, lottery, coveringConfig);
+             setGeneratedGames(result.games);
+             setCoveringResult(result);
+             setLoadingMessage('');
+             analytics.trackGenerateGames({ 
+               lottery: lottery.id, 
+               mode: 'combinatorial', 
+               count: result.games.length,
+               wheelType: coveringConfig.wheelType 
+             });
+           } catch (coveringError: any) {
+             // Fallback to original if new service fails
+             console.warn('Covering design failed, falling back:', coveringError.message);
+             const games = generateCombinatorialGames(numbersForGeneration, lottery);
+             setGeneratedGames(games);
+             setCoveringResult(null);
+             setLoadingMessage('');
+             analytics.trackGenerateGames({ lottery: lottery.id, mode: 'combinatorial', count: games.length });
+           }
         } else {
             // Smart/Simple/Multiple Mode
             const targetCount = typeof countOverride === 'number' ? countOverride : gamesCount;
