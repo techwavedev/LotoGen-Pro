@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload } from 'lucide-react';
-import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS } from './types';
+import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS, CoveringDesignConfig, DEFAULT_COVERING_CONFIG, CoveringDesignResult } from './types';
 import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended, generateCombinatorialGames } from './services/lotteryService';
+import { generateCoveringDesign } from './services/coveringDesigns';
 import * as analytics from './utils/analytics';
 import GameTicket from './components/GameTicket';
 import SettingsPanel from './components/SettingsPanel';
@@ -32,6 +33,9 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [latestResult, setLatestResult] = useState<{ draw_number: number; numbers: string[]; draw_date: string } | null>(null);
   const [winnersCount, setWinnersCount] = useState<number>(0);
+  // Covering Design state
+  const [coveringConfig, setCoveringConfig] = useState<CoveringDesignConfig>(DEFAULT_COVERING_CONFIG);
+  const [coveringResult, setCoveringResult] = useState<CoveringDesignResult | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const downloadFormRef = useRef<HTMLFormElement>(null);
@@ -617,6 +621,9 @@ function App() {
                 analysis={analysis}
                 exclusionMode={exclusionMode}
                 setExclusionMode={setExclusionMode}
+                coveringConfig={coveringConfig}
+                setCoveringConfig={setCoveringConfig}
+                abbreviatedStats={coveringResult ? coveringResult.stats : null}
              />
           )}
 
