@@ -2,7 +2,7 @@ import React from 'react';
 import { HistoryAnalysis, NumberStat, BalanceStat, LotteryDefinition, ExtendedHistoryAnalysis } from '../types';
 import { BarChart, TrendingUp, TrendingDown, Grid, BarChart2, ArrowRightLeft, Scale, Copy, Repeat, History, Clock } from 'lucide-react';
 import clsx from 'clsx';
-import DelayFrequency3D from './DelayFrequency3D';
+
 
 interface StatisticsPanelProps {
   analysis: ExtendedHistoryAnalysis | null;
@@ -138,24 +138,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
 
   // ... (in container component)
 
-  const renderDelayHeatmap = () => {
-    return (
-        <div className="p-4 md:p-6 border-b border-gray-100">
-             <div className="flex items-center justify-between mb-4">
-                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
-                    <Clock className="w-4 h-4 text-red-500" />
-                    Mapa de Atrasos 3D (Evolução Temporal)
-                </h3>
-            </div>
-            
-            <DelayFrequency3D lotteryId={lottery.id} lotteryColor={lottery.color} />
-            
-             <p className="text-[10px] text-gray-400 mt-2 italic">
-                *Visualização 3D interativa: Rotacione para ver a evolução dos atrasos ao longo dos últimos concursos.
-            </p>
-        </div>
-    );
-  };
+
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8 overflow-hidden animate-fade-in">
@@ -254,8 +237,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
         </div>
       </div>
 
-      {/* DELAY HEATMAP SECTION */}
-      {renderDelayHeatmap()}
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2">
         {/* Hot/Cold Tables */}
