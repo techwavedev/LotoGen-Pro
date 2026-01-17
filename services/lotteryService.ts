@@ -353,12 +353,19 @@ export const analyzeDelays = (history: Game[], lottery: LotteryDefinition): Dela
 };
 
 // 2. SUM RANGE ANALYSIS - Análise de Faixa de Soma
-export const analyzeSumRange = (history: Game[]): SumRangeStats => {
+export const analyzeSumRange = (history: Game[], lottery?: LotteryDefinition): SumRangeStats => {
   if (history.length === 0) {
     return { min: 0, max: 0, average: 0, stdDev: 0, mostCommonRange: [0, 0] };
   }
   
-  const sums = history.map(g => g.reduce((a, b) => a + b, 0));
+  const sums = history.map(g => {
+      // If lottery is provided and has extras, filter valid numbers only
+      const numsToSum = (lottery && lottery.hasExtras) 
+        ? g.filter(n => n <= lottery.totalNumbers)
+        : g;
+      return numsToSum.reduce((a, b) => a + b, 0);
+  });
+  
   const sorted = [...sums].sort((a, b) => a - b);
   
   const avg = sums.reduce((a, b) => a + b, 0) / sums.length;
@@ -615,12 +622,12 @@ const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
 export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefinition): ExtendedHistoryAnalysis => {
   const baseAnalysis = analyzeHistory(history, lottery);
   const mandelStats = calculateMandelStats(history, lottery);
-  const sumStats = analyzeSumRange(history);
+  const sumStats = analyzeSumRange(history, lottery);
 
   return {
     ...baseAnalysis,
     delayStats: analyzeDelays(history, lottery),
-    sumRangeStats: sumStats,
+    sumRangeStats: analyzeSumRange(history, lottery),
     consecutiveStats: analyzeConsecutives(history),
     trendStats: analyzeTrends(history, lottery),
     repeatBetweenDrawsStats: analyzeRepeats(history),
@@ -640,9 +647,25 @@ export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefiniti
 const generateRandomGame = (lottery: LotteryDefinition, size?: number): Game => {
   const nums = new Set<number>();
   const limit = size || lottery.gameSize;
+  
+  // 1. Generate Main Numbers
   while (nums.size < limit) {
     nums.add(Math.floor(Math.random() * lottery.totalNumbers) + 1);
   }
+
+  // 2. Generate Extras (Trevos)
+  if (lottery.hasExtras && lottery.extrasTotalNumbers && lottery.extrasGameSize) {
+      const extras = new Set<number>();
+      const extraLimit = lottery.extrasGameSize; 
+      
+      while (extras.size < extraLimit) {
+          extras.add(Math.floor(Math.random() * lottery.extrasTotalNumbers) + 1);
+      }
+      
+      const offset = lottery.extrasOffset || 100;
+      extras.forEach(n => nums.add(n + offset));
+  }
+
   return Array.from(nums).sort((a, b) => a - b);
 };
 
@@ -671,7 +694,14 @@ export const generateGames = async (
 
   while (result.length < count && attempts < MAX_ATTEMPTS) {
     attempts++;
-    const candidate = generateRandomGame(lottery, targetSize);
+    const candidateFull = generateRandomGame(lottery, targetSize);
+    
+    // Split for filtering: if hasExtras, candidate (for filters) is only the Main part.
+    // We assume 100 as safe boundary or use lottery.totalNumbers for filtering
+    const candidate = lottery.hasExtras 
+        ? candidateFull.filter(n => n <= lottery.totalNumbers)
+        : candidateFull;
+
     let isValid = true;
 
     // IMPORTANT: If we are generating Multiple Bets (larger than standard),
@@ -802,7 +832,7 @@ export const generateGames = async (
     }
 
     if (isValid) {
-      result.push(candidate);
+      result.push(candidateFull);
     }
   }
 
