@@ -694,8 +694,8 @@ function App() {
 
                 {/* Indeterminate progress bar for file operations */}
                 {!showResultsSkeleton && operationTotal === 0 && (
-                  <div className="mt-3 bg-violet-200 rounded-full h-2 overflow-hidden">
-                    <div className="bg-violet-600 h-full rounded-full animate-[shimmer_1.5s_infinite]"></div>
+                  <div className="mt-3 bg-violet-200 rounded-full h-2 overflow-hidden relative">
+                    <div className="absolute inset-0 bg-violet-600 rounded-full animate-pulse origin-left"></div>
                   </div>
                 )}
               </div>
