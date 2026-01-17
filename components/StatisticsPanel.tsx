@@ -134,8 +134,11 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
   // We need to lazy load Plot component because it depends on window/document
   const Plot = React.useMemo(() => React.lazy(() => import('react-plotly.js')), []);
 
+import DelayFrequency3D from './DelayFrequency3D';
+
+// ... (in container component)
+
   const renderDelayHeatmap = () => {
-    // Replaced with 3D Chart
     return (
         <div className="p-4 md:p-6 border-b border-gray-100">
              <div className="flex items-center justify-between mb-4">
@@ -145,61 +148,8 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
                 </h3>
             </div>
             
-            <div className="w-full h-[500px] border border-gray-100 rounded-lg overflow-hidden bg-white relative">
-                {loading3D && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-                    </div>
-                )}
-                
-                {!loading3D && !delay3DData && (
-                     <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
-                        Dados 3D indisponíveis para esta loteria/modo offline.
-                     </div>
-                )}
-
-                {!loading3D && delay3DData && (
-                    <React.Suspense fallback={<div className="p-4">Carregando Gráfico 3D...</div>}>
-                        <Plot
-                            data={[
-                                {
-                                    z: delay3DData.z,
-                                    x: delay3DData.x,
-                                    y: delay3DData.y,
-                                    type: 'surface',
-                                    colorscale: 'Viridis',
-                                    showscale: false, // Hide colorbar to save space? Or true?
-                                    contours: {
-                                        z: {
-                                            show: true,
-                                            usecolormap: true,
-                                            highlightcolor: "#42f562",
-                                            project: { z: true }
-                                        }
-                                    }
-                                }
-                            ]}
-                            layout={{
-                                autosize: true,
-                                margin: { l: 0, r: 0, b: 0, t: 0 },
-                                scene: {
-                                    xaxis: { title: 'Número', tickfont: { size: 10 } },
-                                    yaxis: { title: 'Concurso', tickfont: { size: 10 } },
-                                    zaxis: { title: 'Atraso', tickfont: { size: 10 } },
-                                    camera: {
-                                        eye: { x: 1.5, y: 1.5, z: 1.5 }
-                                    }
-                                },
-                                // paper_bgcolor: 'rgba(0,0,0,0)',
-                                // plot_bgcolor: 'rgba(0,0,0,0)',
-                            }}
-                            useResizeHandler={true}
-                            style={{ width: "100%", height: "100%" }}
-                            config={{ displayModeBar: false }}
-                        />
-                    </React.Suspense>
-                )}
-            </div>
+            <DelayFrequency3D lotteryId={lottery.id} lotteryColor={lottery.color} />
+            
              <p className="text-[10px] text-gray-400 mt-2 italic">
                 *Visualização 3D interativa: Rotacione para ver a evolução dos atrasos ao longo dos últimos concursos.
             </p>
