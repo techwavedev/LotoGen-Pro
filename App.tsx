@@ -443,6 +443,24 @@ function App() {
 
       <main className="max-w-5xl mx-auto px-4 -mt-8">
         
+        {/* Beta Testing Banner for New Lotteries */}
+        {['duplasena', 'timemania', 'diadesorte'].includes(currentLotteryId) && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 animate-fade-in">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-amber-100 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-amber-800 mb-1">🧪 Recurso em Fase de Testes</h4>
+                <p className="text-sm text-amber-700">
+                  Os geradores para <strong>Dupla Sena</strong>, <strong>Timemania</strong>, <strong>Dia de Sorte</strong>, <strong>Super Sete</strong> e <strong>+Milionária</strong> foram recentemente adicionados e estão em fase de testes.
+                  Algumas funcionalidades podem não estar totalmente disponíveis. Estamos trabalhando para melhorar continuamente!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Latest Result Card */}
         {latestResult && (
           <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-4 mb-4 animate-slide-up">
