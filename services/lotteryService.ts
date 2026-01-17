@@ -2,7 +2,8 @@ import { read, utils } from 'xlsx';
 import { 
   Game, FilterConfig, HistoryAnalysis, NumberStat, BalanceStat, RepetitionStats, LotteryDefinition,
   DelayStats, SumRangeStats, ConsecutiveStats, TrendStats, RepeatBetweenDrawsStats, QuadrantStats,
-  ExtendedHistoryAnalysis, ExtendedFilterConfig, CycleStats, HistoryEntry, PrizeInfo
+  ExtendedHistoryAnalysis, ExtendedFilterConfig, CycleStats, HistoryEntry, PrizeInfo,
+  ExtrasDelayStats, ExtrasAdvancedStats
 } from '../types';
 
 // Cache for Primes to avoid recalculating
@@ -364,8 +365,8 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
   const mostFrequent = [...stats].sort((a, b) => b.count - a.count);
   const leastFrequent = [...stats].sort((a, b) => a.count - b.count);
 
-  // Extras Stats
-  let extrasStats;
+  // Extras Stats - Análise Avançada para Trevos (+Milionária)
+  let extrasStats: ExtrasAdvancedStats | undefined;
   if (hasExtras) {
       const eStats: NumberStat[] = [];
       for(let i=1; i<=extrasLimit; i++) {
@@ -375,10 +376,127 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
               percentage: totalGames > 0 ? ((extrasCounts[i] / totalGames) * 100).toFixed(2) : '0.00'
           });
       }
+      
+      const sortedMostFreq = [...eStats].sort((a,b) => b.count - a.count);
+      const sortedLeastFreq = [...eStats].sort((a,b) => a.count - b.count);
+      
+      // Hot/Cold Extras (top 3 = hot, bottom 3 = cold)
+      const hotExtras = sortedMostFreq.slice(0, 3).map(s => s.number);
+      const coldExtras = sortedLeastFreq.slice(0, 3).map(s => s.number);
+      
+      // Análise de Atrasos dos Trevos
+      const extrasDelayStats: ExtrasDelayStats[] = [];
+      for (let num = 1; num <= extrasLimit; num++) {
+          let lastSeen = -1;
+          let maxDelay = 0;
+          let totalDelay = 0;
+          let delayCount = 0;
+          let prevIndex = -1;
+          
+          for (let i = 0; i < history.length; i++) {
+              const gameExtras = history[i].filter(n => n > extrasOffset).map(n => n - extrasOffset);
+              if (gameExtras.includes(num)) {
+                  if (lastSeen === -1 || i > lastSeen) lastSeen = i;
+                  if (prevIndex !== -1) {
+                      const gap = i - prevIndex - 1;
+                      totalDelay += gap;
+                      delayCount++;
+                      maxDelay = Math.max(maxDelay, gap);
+                  }
+                  prevIndex = i;
+              }
+          }
+          
+          const currentDelay = lastSeen === -1 ? totalGames : (totalGames - 1 - lastSeen);
+          
+          extrasDelayStats.push({
+              number: num,
+              lastSeen: lastSeen === -1 ? 0 : (totalGames - lastSeen),
+              delay: currentDelay,
+              maxDelay: maxDelay,
+              avgDelay: delayCount > 0 ? Math.round(totalDelay / delayCount * 10) / 10 : 0
+          });
+      }
+      
+      // Análise de Pares de Trevos mais frequentes
+      const pairCounts: Record<string, number> = {};
+      history.forEach(game => {
+          const gameExtras = game.filter(n => n > extrasOffset).map(n => n - extrasOffset).sort((a,b) => a-b);
+          if (gameExtras.length >= 2) {
+              const pairKey = `${gameExtras[0]}-${gameExtras[1]}`;
+              pairCounts[pairKey] = (pairCounts[pairKey] || 0) + 1;
+          }
+      });
+      
+      const pairFrequency = Object.entries(pairCounts)
+          .map(([key, count]) => {
+              const [a, b] = key.split('-').map(Number);
+              return {
+                  pair: [a, b] as [number, number],
+                  count,
+                  percentage: totalGames > 0 ? ((count / totalGames) * 100).toFixed(2) : '0.00'
+              };
+          })
+          .sort((a, b) => b.count - a.count);
+      
+      // Análise de Repetição de Trevos entre Sorteios
+      const repeatDistribution: Record<number, number> = {};
+      let totalRepeats = 0;
+      
+      for (let i = 1; i < history.length; i++) {
+          const prevExtras = new Set(history[i - 1].filter(n => n > extrasOffset).map(n => n - extrasOffset));
+          const currExtras = history[i].filter(n => n > extrasOffset).map(n => n - extrasOffset);
+          const repeats = currExtras.filter(n => prevExtras.has(n)).length;
+          repeatDistribution[repeats] = (repeatDistribution[repeats] || 0) + 1;
+          totalRepeats += repeats;
+      }
+      
+      // Tendências dos Trevos (últimos 20 sorteios vs anteriores)
+      let trendStats;
+      if (history.length >= 40) {
+          const recentHistory = history.slice(-20);
+          const olderHistory = history.slice(-40, -20);
+          
+          const recentCounts = new Array(extrasLimit + 1).fill(0);
+          const olderCounts = new Array(extrasLimit + 1).fill(0);
+          
+          recentHistory.forEach(g => {
+              g.filter(n => n > extrasOffset).map(n => n - extrasOffset)
+                  .forEach(n => { if (n <= extrasLimit) recentCounts[n]++; });
+          });
+          olderHistory.forEach(g => {
+              g.filter(n => n > extrasOffset).map(n => n - extrasOffset)
+                  .forEach(n => { if (n <= extrasLimit) olderCounts[n]++; });
+          });
+          
+          const trends: { number: number; trend: number }[] = [];
+          for (let i = 1; i <= extrasLimit; i++) {
+              trends.push({
+                  number: i,
+                  trend: (recentCounts[i] / 20) - (olderCounts[i] / 20)
+              });
+          }
+          
+          const byTrend = [...trends].sort((a, b) => b.trend - a.trend);
+          trendStats = {
+              emerging: byTrend.slice(0, 3).map(t => t.number),
+              declining: byTrend.slice(-3).reverse().map(t => t.number)
+          };
+      }
+      
       extrasStats = {
           allStats: eStats,
-          mostFrequent: [...eStats].sort((a,b) => b.count - a.count),
-          leastFrequent: [...eStats].sort((a,b) => a.count - b.count)
+          mostFrequent: sortedMostFreq,
+          leastFrequent: sortedLeastFreq,
+          hotExtras,
+          coldExtras,
+          delayStats: extrasDelayStats.sort((a, b) => b.delay - a.delay),
+          pairFrequency,
+          repeatBetweenDraws: {
+              avgRepeats: history.length > 1 ? Math.round(totalRepeats / (history.length - 1) * 10) / 10 : 0,
+              distribution: repeatDistribution
+          },
+          trendStats
       };
   }
 

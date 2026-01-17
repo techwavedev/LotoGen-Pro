@@ -227,6 +227,35 @@ export interface RepetitionStats {
   nearMiss2: number; // gameSize - 2 match
 }
 
+// Estatísticas de Atraso para Extras (Trevos)
+export interface ExtrasDelayStats {
+  number: number;
+  lastSeen: number;      // Último concurso onde apareceu (1 = mais recente)
+  delay: number;         // Quantos sorteios atrasado
+  maxDelay: number;      // Maior atraso histórico
+  avgDelay: number;      // Média de atraso
+}
+
+// Estatísticas Avançadas dos Extras (Trevos)
+export interface ExtrasAdvancedStats {
+  mostFrequent: NumberStat[];
+  leastFrequent: NumberStat[];
+  allStats: NumberStat[];
+  // Estatísticas avançadas específicas para trevos
+  delayStats: ExtrasDelayStats[];           // Atrasos de cada trevo
+  hotExtras: number[];                       // Trevos quentes (mais frequentes)
+  coldExtras: number[];                      // Trevos frios (menos frequentes)
+  pairFrequency: { pair: [number, number]; count: number; percentage: string }[]; // Pares mais frequentes
+  repeatBetweenDraws: {                      // Repetição do sorteio anterior
+    avgRepeats: number;
+    distribution: Record<number, number>;    // {0: X, 1: Y, 2: Z}
+  };
+  trendStats?: {                             // Tendências dos trevos
+    emerging: number[];                      // Subindo de frequência
+    declining: number[];                     // Caindo de frequência
+  };
+}
+
 export interface HistoryAnalysis {
   totalGames: number;
   mostFrequent: NumberStat[]; // Ordered Descending
@@ -235,11 +264,7 @@ export interface HistoryAnalysis {
   hotNumbers: number[]; // The top N numbers
   balanceStats: BalanceStat[]; // Distribution of Hot vs Cold in history
   repetitionStats: RepetitionStats; // New repetition stats
-  extrasStats?: {
-    mostFrequent: NumberStat[];
-    leastFrequent: NumberStat[];
-    allStats: NumberStat[];
-  };
+  extrasStats?: ExtrasAdvancedStats; // Estatísticas completas dos extras (Trevos)
 }
 
 // ============ ADVANCED STATISTICAL ANALYSIS TYPES ============
@@ -380,6 +405,22 @@ export interface ExtendedFilterConfig extends FilterConfig {
 
   // Cycle Strategy
   useCycleFilter: boolean; // Force missing cycle numbers
+  
+  // ============ FILTROS ESPECÍFICOS PARA EXTRAS/TREVOS (+Milionária) ============
+  useExtrasHotColdFilter: boolean;           // Filtrar trevos por quente/frio
+  minHotExtras: number;                       // Mínimo de trevos quentes
+  maxHotExtras: number;                       // Máximo de trevos quentes
+  
+  useExtrasDelayFilter: boolean;             // Filtrar por atraso dos trevos
+  extrasDelayThreshold: number;              // Considerar atrasado se > N sorteios
+  minDelayedExtras: number;                  // Mínimo de trevos atrasados
+  
+  useExtrasRepeatFilter: boolean;            // Filtrar repetição de trevos do último sorteio
+  minExtrasRepeats: number;                  // Mínimo de trevos repetidos
+  maxExtrasRepeats: number;                  // Máximo de trevos repetidos
+  
+  excludeHotExtrasPair: boolean;             // Evitar pares de trevos muito frequentes
+  forceBalancedExtras: boolean;              // Forçar equilíbrio entre trevos (1-3 vs 4-6)
 }
 
 // Default para novos filtros
@@ -400,6 +441,19 @@ export const DEFAULT_EXTENDED_CONFIG: ExtendedFilterConfig = {
   maxRepeatsFromLast: 5,
   useInterleavingFilter: false,
   balanceGroups: true,
+  
+  // Extras/Trevos Defaults (+Milionária)
+  useExtrasHotColdFilter: false,
+  minHotExtras: 0,
+  maxHotExtras: 2,
+  useExtrasDelayFilter: false,
+  extrasDelayThreshold: 5,
+  minDelayedExtras: 0,
+  useExtrasRepeatFilter: false,
+  minExtrasRepeats: 0,
+  maxExtrasRepeats: 2,
+  excludeHotExtrasPair: false,
+  forceBalancedExtras: false,
   
   // Mandel Defaults
   usePrimeCountFilter: true,
