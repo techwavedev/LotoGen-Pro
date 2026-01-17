@@ -329,7 +329,7 @@ export function generateFullWheel(
   // Limite de segurança
   const MAX_COMBINATIONS = lottery.gameSize >= 50 ? 500 : 50000;
   if (fullWheelCount > MAX_COMBINATIONS) {
-    throw new Error(`Muitas combinações (~${fullWheelCount.toLocaleString()}). Máximo: ${MAX_COMBINATIONS.toLocaleString()} jogos.`);
+    throw new Error(`O fechamento total geraria ${fullWheelCount.toLocaleString()} jogos (máximo: ${MAX_COMBINATIONS.toLocaleString()}). Use o modo "Otimizado" ou "Balanceado" para mais números!`);
   }
   
   const games = getCombinations(pool, k).map(g => g.sort((a, b) => a - b));

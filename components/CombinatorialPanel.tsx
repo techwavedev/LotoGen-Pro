@@ -42,11 +42,17 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
       ? Array.from({ length: lottery.totalNumbers }, (_, i) => i + 1).filter(n => !selection.includes(n))
       : selection;
   
-  // Dynamic limit based on mode
+  // Dynamic limit based on mode and wheel type
+  // For abbreviated/balanced modes, we can allow more numbers since they generate fewer games
   const MAX_EXCLUSIONS = 50; // Max numbers to exclude (leaves 50+ for pool)
-  const MAX_SELECTION = exclusionMode
-      ? MAX_EXCLUSIONS
-      : (lottery.gameSize >= 50 ? lottery.totalNumbers : Math.min(lottery.gameSize + 6, 21));
+  const getMaxSelection = () => {
+    if (exclusionMode) return MAX_EXCLUSIONS;
+    if (lottery.gameSize >= 50) return lottery.totalNumbers;
+    // For optimized modes, allow up to 20 numbers; for full wheel, keep stricter limit
+    // But we check wheel type dynamically, so use max possible here
+    return Math.min(lottery.maxGameSize || 20, 20);
+  };
+  const MAX_SELECTION = getMaxSelection();
   
   const combinationsCount = (n: number, k: number) => {
       if (k < 0 || k > n) return 0;
@@ -320,6 +326,18 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                        <span className="text-green-700 font-medium">
                            Economia estimada: ~{savingsPercent}% ({estimatedAbbreviatedGames.toLocaleString()} jogos vs {totalCombinations.toLocaleString()})
                        </span>
+                   </div>
+               )}
+               
+               {/* Warning for Full Wheel with many numbers */}
+               {coveringConfig.wheelType === 'full' && activePool.length > 12 && (
+                   <div className="mt-3 p-3 bg-amber-100 border border-amber-300 rounded-lg">
+                       <p className="text-sm text-amber-800 font-medium">
+                           ⚠️ Com {activePool.length} números, o fechamento total gera {totalCombinations.toLocaleString()} jogos!
+                       </p>
+                       <p className="text-xs text-amber-700 mt-1">
+                           💡 <strong>Recomendação:</strong> Use <strong>Otimizado</strong> ou <strong>Balanceado</strong> para reduzir significativamente a quantidade de jogos mantendo uma boa cobertura.
+                       </p>
                    </div>
                )}
            </div>
