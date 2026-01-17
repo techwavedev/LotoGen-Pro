@@ -956,6 +956,133 @@ const generateRandomGame = (lottery: LotteryDefinition, size?: number): Game => 
   return Array.from(nums).sort((a, b) => a - b);
 };
 
+// Gerador de Extras (Trevos) com filtros avançados
+const generateFilteredExtras = (
+  lottery: LotteryDefinition,
+  config: ExtendedFilterConfig,
+  extrasStats?: ExtrasAdvancedStats,
+  lastDrawExtras?: number[]
+): number[] => {
+  if (!lottery.hasExtras || !lottery.extrasTotalNumbers || !lottery.extrasGameSize) return [];
+  
+  const extraLimit = lottery.extrasGameSize;
+  const totalExtras = lottery.extrasTotalNumbers;
+  const offset = lottery.extrasOffset || 100;
+  
+  // Pré-computar dados de filtros
+  const hotExtrasSet = new Set(extrasStats?.hotExtras || []);
+  const delayedExtrasSet = new Set<number>();
+  
+  if (config.useExtrasDelayFilter && extrasStats?.delayStats) {
+    extrasStats.delayStats
+      .filter(d => d.delay >= config.extrasDelayThreshold)
+      .forEach(d => delayedExtrasSet.add(d.number));
+  }
+  
+  // Pares mais frequentes a evitar
+  const hotPairsSet = new Set<string>();
+  if (config.excludeHotExtrasPair && extrasStats?.pairFrequency) {
+    // Top 3 pares mais frequentes
+    extrasStats.pairFrequency.slice(0, 3).forEach(pf => {
+      hotPairsSet.add(`${pf.pair[0]}-${pf.pair[1]}`);
+    });
+  }
+  
+  const lastExtrasSet = new Set(lastDrawExtras || []);
+  
+  const MAX_EXTRA_ATTEMPTS = 500;
+  let attempts = 0;
+  
+  while (attempts < MAX_EXTRA_ATTEMPTS) {
+    attempts++;
+    
+    const extras = new Set<number>();
+    while (extras.size < extraLimit) {
+      extras.add(Math.floor(Math.random() * totalExtras) + 1);
+    }
+    
+    const extrasArr = Array.from(extras).sort((a, b) => a - b);
+    let isValid = true;
+    
+    // 1. Filtro Hot/Cold para Extras
+    if (config.useExtrasHotColdFilter && hotExtrasSet.size > 0) {
+      const hotCount = extrasArr.filter(n => hotExtrasSet.has(n)).length;
+      if (hotCount < config.minHotExtras || hotCount > config.maxHotExtras) {
+        isValid = false;
+      }
+    }
+    
+    // 2. Filtro de Atraso para Extras
+    if (isValid && config.useExtrasDelayFilter && delayedExtrasSet.size > 0) {
+      const delayedCount = extrasArr.filter(n => delayedExtrasSet.has(n)).length;
+      if (delayedCount < config.minDelayedExtras) {
+        isValid = false;
+      }
+    }
+    
+    // 3. Filtro de Repetição do Último Sorteio
+    if (isValid && config.useExtrasRepeatFilter && lastExtrasSet.size > 0) {
+      const repeatCount = extrasArr.filter(n => lastExtrasSet.has(n)).length;
+      if (repeatCount < config.minExtrasRepeats || repeatCount > config.maxExtrasRepeats) {
+        isValid = false;
+      }
+    }
+    
+    // 4. Evitar pares muito frequentes
+    if (isValid && config.excludeHotExtrasPair && hotPairsSet.size > 0) {
+      const pairKey = `${extrasArr[0]}-${extrasArr[1]}`;
+      if (hotPairsSet.has(pairKey)) {
+        isValid = false;
+      }
+    }
+    
+    // 5. Forçar equilíbrio entre trevos (1-3 vs 4-6)
+    if (isValid && config.forceBalancedExtras && totalExtras === 6) {
+      const lowCount = extrasArr.filter(n => n <= 3).length;
+      // Requer pelo menos 1 de cada metade
+      if (lowCount === 0 || lowCount === extraLimit) {
+        isValid = false;
+      }
+    }
+    
+    if (isValid) {
+      return extrasArr.map(n => n + offset);
+    }
+  }
+  
+  // Fallback: retorna extras aleatórios se nenhum passar nos filtros
+  const fallbackExtras = new Set<number>();
+  while (fallbackExtras.size < extraLimit) {
+    fallbackExtras.add(Math.floor(Math.random() * totalExtras) + 1);
+  }
+  return Array.from(fallbackExtras).sort((a, b) => a - b).map(n => n + offset);
+};
+
+// Gerador de jogo completo com filtros avançados para Extras
+const generateRandomGameWithFilteredExtras = (
+  lottery: LotteryDefinition,
+  config: ExtendedFilterConfig,
+  extrasStats?: ExtrasAdvancedStats,
+  lastDrawExtras?: number[],
+  size?: number
+): Game => {
+  const nums = new Set<number>();
+  const limit = size || lottery.gameSize;
+  
+  // 1. Generate Main Numbers
+  while (nums.size < limit) {
+    nums.add(Math.floor(Math.random() * lottery.totalNumbers) + 1);
+  }
+
+  // 2. Generate Filtered Extras (Trevos)
+  if (lottery.hasExtras) {
+    const extras = generateFilteredExtras(lottery, config, extrasStats, lastDrawExtras);
+    extras.forEach(n => nums.add(n));
+  }
+
+  return Array.from(nums).sort((a, b) => a - b);
+};
+
 const isSequential = (game: Game, gameSize: number): boolean => {
   // Checks if the WHOLE game is a sequence (rare for large games)
   if (gameSize > 20) return false; 
