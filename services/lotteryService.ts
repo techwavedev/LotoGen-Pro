@@ -328,17 +328,26 @@ export const parseHistoryFile = async (file: File, lottery: LotteryDefinition): 
 };
 
 export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): HistoryAnalysis => {
-  const totalGames = history.length;
-  const counts = new Array(lottery.totalNumbers + 1).fill(0); 
-
   // Extras setup
   const hasExtras = !!lottery.hasExtras;
   const extrasLimit = lottery.extrasTotalNumbers || 0;
   const extrasOffset = lottery.extrasOffset || 0;
+  const extrasDrawSize = lottery.extrasDrawSize || 0;
   const extrasCounts = hasExtras ? new Array(extrasLimit + 1).fill(0) : [];
 
+  // For lotteries with extras (like +Milionária), filter out games that don't have complete extras data
+  const filteredHistory = hasExtras 
+    ? history.filter(game => {
+        const extrasInGame = game.filter(n => n > extrasOffset);
+        return extrasInGame.length === extrasDrawSize;
+      })
+    : history;
+  
+  const totalGames = filteredHistory.length;
+  const counts = new Array(lottery.totalNumbers + 1).fill(0);
+
   // Count occurrences
-  history.forEach(game => {
+  filteredHistory.forEach(game => {
     game.forEach(num => {
       if (num >= 1 && num <= lottery.totalNumbers) {
         counts[num]++;
