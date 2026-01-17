@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Dispatch, SetStateAction } from 'react';
 import { LotteryDefinition, HistoryEntry, ExtendedHistoryAnalysis } from '../types';
 import { analyzeHistoryExtended } from '../services/lotteryService';
 
