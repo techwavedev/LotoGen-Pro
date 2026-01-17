@@ -30,7 +30,9 @@ function App() {
     loadingMessage: dataLoadingMessage,
     isSyncing,
     error: dataError,
-    clearError
+    clearError,
+    setHistory,
+    setAnalysis
   } = useLotteryData({
     lotteryId: currentLotteryId,
     lottery,
