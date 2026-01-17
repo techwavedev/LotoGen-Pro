@@ -357,3 +357,58 @@ export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {
     fibonacci: { min: 2, available: 16, hint: "3 a 8" }
   }
 };
+
+// ============ COVERING DESIGNS & ABBREVIATED WHEELS ============
+
+// Tipo de Wheel/Fechamento
+export type WheelType = 'full' | 'abbreviated' | 'balanced';
+
+// Níveis de garantia para Abbreviated Wheels
+export type GuaranteeLevel = 
+  | '3-if-4'   // 3 acertos garantidos se 4 números sorteados estiverem no pool
+  | '4-if-5'   // 4 acertos se 5 números sorteados  
+  | '3-if-5'   // 3 acertos se 5 números sorteados
+  | '5-if-6'   // 5 acertos se 6 números sorteados
+  | '4-if-6'   // 4 acertos se 6 números sorteados
+  | '3-if-6'   // 3 acertos se 6 números sorteados
+  | 'custom';  // Personalizado
+
+// Configuração do Covering Design
+export interface CoveringDesignConfig {
+  wheelType: WheelType;
+  guaranteeLevel: GuaranteeLevel;
+  // Para garantia customizada
+  customGuarantee?: {
+    mustMatch: number;    // Quantos números devem ser sorteados do pool
+    guaranteed: number;   // Quantos acertos são garantidos
+  };
+}
+
+// Resultado do gerador com estatísticas
+export interface CoveringDesignResult {
+  games: Game[];
+  stats: {
+    fullWheelCount: number;      // Quantos jogos teria no fechamento total
+    abbreviatedCount: number;    // Quantos jogos foram gerados
+    savingsPercent: number;      // % de economia
+    guaranteeDescription: string; // Descrição legível da garantia
+    coverageScore: number;       // 0-100 score de cobertura
+  };
+}
+
+// Defaults para Covering Design
+export const DEFAULT_COVERING_CONFIG: CoveringDesignConfig = {
+  wheelType: 'full',
+  guaranteeLevel: '4-if-5',
+};
+
+// Descrições das garantias para UI
+export const GUARANTEE_DESCRIPTIONS: Record<GuaranteeLevel, string> = {
+  '3-if-4': 'Garante 3 acertos se 4 números sorteados estiverem no seu grupo',
+  '4-if-5': 'Garante 4 acertos se 5 números sorteados estiverem no seu grupo',
+  '3-if-5': 'Garante 3 acertos se 5 números sorteados estiverem no seu grupo',
+  '5-if-6': 'Garante 5 acertos se 6 números sorteados estiverem no seu grupo',
+  '4-if-6': 'Garante 4 acertos se 6 números sorteados estiverem no seu grupo',
+  '3-if-6': 'Garante 3 acertos se 6 números sorteados estiverem no seu grupo',
+  'custom': 'Definir garantia personalizada',
+};
