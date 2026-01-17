@@ -673,9 +673,31 @@ function App() {
               <div>
                 <h4 className="font-semibold text-blue-800 mb-0.5">Sincronizando Resultados...</h4>
                 <p className="text-sm text-blue-700">
-                  Estamos baixando os resultados oficiais da Caixa para {lottery.name}. 
+                  Estamos baixando os resultados oficiais da Caixa para {lottery.name}.
                   Isso pode levar alguns instantes. Os dados aparecerão automaticamente.
                 </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Operation Progress Banner */}
+        {isLoading && operationStep && (
+          <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-xl p-4 mb-4 animate-slide-up">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-violet-100 rounded-full">
+                <div className="w-5 h-5 border-2 border-violet-600 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-violet-800 mb-1">{loadingMessage}</h4>
+                <p className="text-sm text-violet-700">{operationStep}</p>
+
+                {/* Indeterminate progress bar for file operations */}
+                {!showResultsSkeleton && operationTotal === 0 && (
+                  <div className="mt-3 bg-violet-200 rounded-full h-2 overflow-hidden">
+                    <div className="bg-violet-600 h-full rounded-full animate-[shimmer_1.5s_infinite]"></div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
