@@ -158,7 +158,7 @@ export function greedyCoveringGenerator(
   
   // Limite de segurança
   if (allGames.length > 100000) {
-    throw new Error(`Pool muito grande: ${allGames.length} combinações possíveis. Reduza o número de números selecionados.`);
+    throw new Error(`Pool muito grande: ${allGames.length.toLocaleString()} combinações possíveis. Use um grupo menor ou escolha "Balanceado" que é mais eficiente.`);
   }
   
   const selectedGames: Game[] = [];
@@ -262,7 +262,7 @@ export function generateAbbreviatedWheel(
   // Limitar para evitar travamento
   const maxTSubsets = binomial(pool.length, mustMatch);
   if (maxTSubsets > 50000) {
-    throw new Error(`Muitos subconjuntos para verificar (${maxTSubsets}). Reduza o pool ou aumente o nível de garantia.`);
+    throw new Error(`Muitos subconjuntos para verificar (${maxTSubsets.toLocaleString()}). Tente reduzir o pool ou escolher um nível de garantia mais simples (ex: 3-if-4).`);
   }
   
   // Gerar wheel abreviado usando greedy
