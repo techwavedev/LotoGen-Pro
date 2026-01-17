@@ -922,7 +922,68 @@ export const generateGamesExtended = async (
     }
     if (!isValid) continue;
 
+    // ============ MANDEL / GEOMETRIC FILTERS ============
+
+    // 2.1 Prime Count Filter
+    if (config.usePrimeCountFilter) {
+      const primeCount = candidate.filter(n => PRIMES_SET.has(n)).length;
+      if (primeCount < config.minPrimes || primeCount > config.maxPrimes) {
+        isValid = false;
+      }
+    }
+    if (!isValid) continue;
+
+    // 2.2 Fibonacci Filter
+    if (config.useFibonacciFilter) {
+       // Helper set defined at module level
+       const fibCount = candidate.filter(n => FIBONACCI_SET.has(n)).length;
+       if (fibCount < config.minFibonacciNumbers) { 
+          isValid = false;
+       }
+    }
+    if (!isValid) continue;
+
+    // 2.3 Edge Filter
+    if (config.useEdgeFilter) {
+        const numRows = Math.ceil(lottery.totalNumbers / lottery.cols);
+        let edgeCount = 0;
+        for (const n of candidate) {
+             const row = Math.ceil(n / lottery.cols);
+             const col = (n - 1) % lottery.cols + 1;
+             if (row === 1 || row === numRows || col === 1 || col === lottery.cols) {
+                 edgeCount++;
+             }
+        }
+        if (edgeCount < config.minEdgeNumbers || edgeCount > config.maxEdgeNumbers) {
+            isValid = false;
+        }
+    }
+    if (!isValid) continue;
+    
+    // 2.4 Decade Balance
+    if (config.useDecadeBalanceFilter) {
+        const decades = new Set(candidate.map(n => Math.floor((n-1)/10)));
+        if (decades.size < config.minDecadesRepresented) {
+            isValid = false;
+        }
+    }
+    if (!isValid) continue;
+    
+    // 2.5 Spread Filter
+    if (config.useSpreadFilter && candidate.length > 1) {
+        let spreadSum = 0;
+        for(let i=0; i<candidate.length-1; i++) {
+            spreadSum += (candidate[i+1] - candidate[i]);
+        }
+        const avgSpread = spreadSum / (candidate.length - 1);
+        if (avgSpread < config.minAverageSpread) {
+            isValid = false;
+        }
+    }
+    if (!isValid) continue;
+
     // ============ NEW ADVANCED FILTERS ============
+
 
     // 3. DELAY FILTER - Números Atrasados
     // Only apply if there are enough delayed numbers to satisfy the requirement

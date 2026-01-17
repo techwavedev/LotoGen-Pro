@@ -2,7 +2,7 @@ export type LotteryNumber = number;
 
 export type Game = LotteryNumber[];
 
-export type LotteryId = 'lotofacil' | 'megasena' | 'quina' | 'lotomania' | 'duplasena' | 'timemania' | 'diadesorte';
+export type LotteryId = 'lotofacil' | 'megasena' | 'quina' | 'lotomania' | 'duplasena' | 'timemania' | 'diadesorte' | 'maismilionaria';
 
 export interface LotteryDefinition {
   id: LotteryId;
@@ -17,6 +17,13 @@ export interface LotteryDefinition {
   colorName: string; // Tailwind color name approx
   downloadParam: string; // Parameter for asloterias.com.br download (l=XX)
   basePrice: number; // Preço da aposta mínima (R$)
+  // Initial support for "Extras" (Trevos)
+  hasExtras?: boolean;
+  extrasTotalNumbers?: number; // Ex: 6 for Trevos
+  extrasGameSize?: number; // Ex: 2 for Trevos
+  extrasDrawSize?: number; // Ex: 2 for Trevos
+  extrasOffset?: number; // Ex: 100 (to store in same array)
+  extrasName?: string; // Ex: "Trevos"
 }
 
 export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
@@ -117,6 +124,26 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     colorName: 'amber',
     downloadParam: 'dd',
     basePrice: 2.50
+  },
+  maismilionaria: {
+    id: 'maismilionaria',
+    name: '+Milionária',
+    totalNumbers: 50,
+    gameSize: 6,
+    maxGameSize: 12, // Permite apostar até 12 números
+    drawSize: 6,
+    cols: 10,
+    visualCols: 10,
+    color: '#1e293b', // Slate 800 - Elegant Dark
+    colorName: 'slate',
+    downloadParam: 'mm', // Guessing 'mm'
+    basePrice: 6.00,
+    hasExtras: true,
+    extrasTotalNumbers: 6,
+    extrasGameSize: 2,
+    extrasDrawSize: 2,
+    extrasOffset: 100,
+    extrasName: 'Trevos'
   }
 };
 
@@ -418,6 +445,13 @@ export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {
     edges: { min: 2, max: 5, hint: "2 a 5 na borda" },
     spread: { min: 3, hint: "Espalhe bem os números" },
     fibonacci: { min: 0, available: 6, hint: "0 a 2 (1,2,3,5,8,13,21)" }
+  },
+  maismilionaria: {
+    primes: { min: 1, max: 3, hint: "1 a 3 primos (em 6 números)" },
+    decades: { min: 3, total: 5, hint: "Distribua em 3+ décadas" },
+    edges: { min: 2, max: 4, hint: "Equilíbrio borda" },
+    spread: { min: 4, hint: "Espalhe bem os números" },
+    fibonacci: { min: 0, available: 7, hint: "0 a 2" }
   }
 };
 

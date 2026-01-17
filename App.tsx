@@ -90,6 +90,29 @@ function App() {
         maxHotNumbers: idealHot + 2
     }));
 
+    // Check cache first (independent of API)
+    const cacheKey = `history_${currentLotteryId}`;
+    const cachedData = localStorage.getItem(cacheKey);
+    const cachedDateKey = `history_${currentLotteryId}_date`;
+    const cachedDate = localStorage.getItem(cachedDateKey);
+    
+    let loadedFromCache = false;
+
+    if (cachedData && cachedDate && isHistoryCacheValid(cachedDate)) {
+      // Use cached data
+      try {
+        const games = JSON.parse(cachedData);
+        if (Array.isArray(games) && games.length > 0) {
+            setHistory(games);
+            const stats = analyzeHistoryExtended(games, lottery);
+            setAnalysis(stats);
+            loadedFromCache = true;
+        }
+      } catch (e) {
+        console.error("Cache invalido", e);
+      }
+    }
+
     // Auto-fetch from API if available
     if (apiUrl) {
       // Fetch latest result
@@ -106,20 +129,8 @@ function App() {
         })
         .catch(() => {});
 
-      // Check cache first
-      const cacheKey = `history_${currentLotteryId}`;
-      const cachedData = localStorage.getItem(cacheKey);
-      const cachedDateKey = `history_${currentLotteryId}_date`;
-      const cachedDate = localStorage.getItem(cachedDateKey);
-      
-      if (cachedData && cachedDate && isHistoryCacheValid(cachedDate)) {
-        // Use cached data
-        const games = JSON.parse(cachedData);
-        setHistory(games);
-        const stats = analyzeHistoryExtended(games, lottery);
-        setAnalysis(stats);
-      } else {
-        // Fetch full history for analysis
+      if (!loadedFromCache) {
+        // Fetch full history for analysis if not in cache
         setIsLoading(true);
         setLoadingMessage(`Carregando histórico da ${lottery.name}...`);
         
@@ -195,18 +206,40 @@ function App() {
   // Auto-optimize when Analysis loads
   useEffect(() => {
     if (analysis) {
-        // When analysis loads, we can be more precise if we want,
-        // effectively "auto-enabling" everything again to confirm valid ranges.
-        // For now, let's just ensure they are enabled.
+        // Apply Optimized Defaults based on historical analysis
         setConfig(prev => ({
             ...prev,
+            // Primes
             usePrimeCountFilter: true,
+            minPrimes: analysis.primeDistributionStats?.recommendedRange[0] ?? prev.minPrimes,
+            maxPrimes: analysis.primeDistributionStats?.recommendedRange[1] ?? prev.maxPrimes,
+            
+            // Decades
             useDecadeBalanceFilter: true,
+            minDecadesRepresented: analysis.decadeDistributionStats?.avgDecadesCovered 
+                ? Math.floor(analysis.decadeDistributionStats.avgDecadesCovered - 0.5) // Conservative floor
+                : prev.minDecadesRepresented,
+            
+            // Edges
             useEdgeFilter: true,
+            minEdgeNumbers: analysis.edgeNumberStats?.recommendedRange[0] ?? prev.minEdgeNumbers,
+            maxEdgeNumbers: analysis.edgeNumberStats?.recommendedRange[1] ?? prev.maxEdgeNumbers,
+            
+            // Spread
             useSpreadFilter: true,
+            minAverageSpread: analysis.spreadStats?.recommendedMinSpread ?? prev.minAverageSpread,
+            
+            // Fibonacci
             useFibonacciFilter: true,
-            useDelayFilter: true,
+            minFibonacciNumbers: analysis.fibonacciStats?.recommendedRange[0] ?? prev.minFibonacciNumbers,
+
+            // Sum Range (P25-P75)
             useSumFilter: true,
+            minSum: analysis.sumRangeStats?.mostCommonRange[0] ?? prev.minSum,
+            maxSum: analysis.sumRangeStats?.mostCommonRange[1] ?? prev.maxSum,
+
+            // Others
+            useDelayFilter: true,
             useConsecutiveFilter: true
         }));
     }
