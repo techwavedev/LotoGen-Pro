@@ -1,6 +1,6 @@
 import React from 'react';
-import { HistoryAnalysis, NumberStat, BalanceStat, LotteryDefinition, ExtendedHistoryAnalysis } from '../types';
-import { BarChart, TrendingUp, TrendingDown, Grid, BarChart2, ArrowRightLeft, Scale, Copy, Repeat, History, Clock } from 'lucide-react';
+import { HistoryAnalysis, NumberStat, BalanceStat, LotteryDefinition, ExtendedHistoryAnalysis, ExtrasAdvancedStats } from '../types';
+import { BarChart, TrendingUp, TrendingDown, Grid, BarChart2, ArrowRightLeft, Scale, Copy, Repeat, History, Clock, Clover, Zap, Timer, Users } from 'lucide-react';
 import clsx from 'clsx';
 
 
