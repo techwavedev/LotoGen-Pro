@@ -5,7 +5,7 @@ import {
   DEFAULT_COVERING_CONFIG, GUARANTEE_DESCRIPTIONS 
 } from '../types';
 import clsx from 'clsx';
-import { Grid, Info, Ban, Check, Zap, Scale, Target, ChevronDown, TrendingDown, Sparkles } from 'lucide-react';
+import { Grid, Info, Ban, Check, Zap, Scale, Target, ChevronDown, TrendingDown, Sparkles, Clover } from 'lucide-react';
 
 interface CombinatorialPanelProps {
   lottery: LotteryDefinition;
@@ -24,11 +24,15 @@ interface CombinatorialPanelProps {
     savingsPercent: number;
     coverageScore: number;
   } | null;
+  // Trevos Support
+  trevosSelection?: number[];
+  setTrevosSelection?: (numbers: number[]) => void;
 }
 
 const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ 
     lottery, selection, setSelection, analysis, exclusionMode, setExclusionMode,
-    coveringConfig, setCoveringConfig, abbreviatedStats
+    coveringConfig, setCoveringConfig, abbreviatedStats,
+    trevosSelection = [], setTrevosSelection
 }) => {
   // Dropdown open state
   const [showGuaranteeDropdown, setShowGuaranteeDropdown] = useState(false);
@@ -76,6 +80,19 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
       }
       setSelection([...selection, num].sort((a, b) => a - b));
     }
+  };
+
+  const toggleTrevos = (num: number) => {
+      if (!setTrevosSelection) return;
+      
+      if (trevosSelection.includes(num)) {
+          setTrevosSelection(trevosSelection.filter(n => n !== num));
+      } else {
+          // Max trevos selection (e.g., 6 like typical max, or all 6/6)
+          // Since there are only 6 trevos total in +Milionária, allow selecting all?
+          // Let's limit to typical meaningful max if any. But 6 is small enough.
+          setTrevosSelection([...trevosSelection, num].sort((a, b) => a - b));
+      }
   };
 
   // Calculate combinations based on active pool
@@ -195,8 +212,13 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
       if (score >= 0.55) return '👍 Bom';
       if (score >= 0.45) return '➖ Neutro';
       if (score >= 0.3) return '👎 Evitar';
+      if (score >= 0.3) return '👎 Evitar';
       return '⚠️ Baixo';
   };
+  
+  // Trevos logic
+  const showTrevosSelector = lottery.hasExtras && lottery.extrasTotalNumbers && setTrevosSelection;
+  const trevosGameSize = lottery.extrasGameSize || 2;
 
   // Wheel type options
   const wheelTypes: { type: WheelType; icon: React.ReactNode; label: string; desc: string }[] = [
@@ -439,6 +461,58 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
               })}
            </div>
 
+           {/* TREVOS SELECTOR (+Milionária) */}
+           {showTrevosSelector && (
+               <div className="mt-8 pt-6 border-t border-gray-100">
+                   <div className="flex items-center gap-2 mb-4">
+                       <div className="p-1.5 bg-emerald-100 rounded text-emerald-700">
+                           <Clover className="w-5 h-5" />
+                       </div>
+                       <div>
+                           <h3 className="text-lg font-bold text-gray-800">Selecione os {lottery.extrasName || 'Trevos'}</h3>
+                           <p className="text-xs text-gray-500">
+                               Necessário selecionar pelo menos {trevosGameSize}. Serão distribuídos nos jogos gerados.
+                           </p>
+                       </div>
+                       <div className="ml-auto flex items-center gap-2">
+                           <span className={clsx("text-sm font-bold px-2 py-1 rounded", trevosSelection.length < trevosGameSize ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600")}>
+                               {trevosSelection.length} selecionados
+                           </span>
+                       </div>
+                   </div>
+                   
+                   <div className="flex justify-center flex-wrap gap-3">
+                       {Array.from({ length: lottery.extrasTotalNumbers || 6 }, (_, i) => i + 1).map(num => {
+                           const isSelected = trevosSelection.includes(num);
+                           return (
+                               <button
+                                   key={num}
+                                   onClick={() => toggleTrevos(num)}
+                                   className={clsx(
+                                       "w-12 h-12 flex items-center justify-center font-bold text-lg rounded-full transition-all transform hover:scale-110",
+                                       isSelected 
+                                          ? "bg-emerald-600 text-white shadow-lg ring-2 ring-emerald-200 ring-offset-2" 
+                                          : "bg-white text-gray-600 border-2 border-emerald-100 hover:border-emerald-300 hover:bg-emerald-50"
+                                   )}
+                               >
+                                   {num}
+                               </button>
+                           );
+                       })}
+                   </div>
+                   {trevosSelection.length > 0 && trevosSelection.length < trevosGameSize && (
+                       <p className="text-center text-xs text-red-500 mt-2">
+                           ⚠️ Selecione pelo menos {trevosGameSize} trevos para completar as apostas.
+                       </p>
+                   )}
+                   {trevosSelection.length > trevosGameSize && (
+                        <p className="text-center text-xs text-emerald-600 mt-2">
+                            ✨ Combinaremos seus {trevosSelection.length} trevos em pares ({(trevosSelection.length * (trevosSelection.length - 1)) / 2} combinações) distribuídos nos jogos.
+                        </p>
+                   )}
+               </div>
+           )}
+
            {/* Legend */}
            {compositeScores && (
               <div className="flex flex-wrap items-center justify-center gap-3 mt-4 text-xs text-gray-500 p-3 bg-gray-50 rounded-lg">
@@ -466,13 +540,16 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
            )}
 
            {/* Helper Actions */}
-           <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
-               <button 
-                  onClick={() => setSelection([])}
-                  className="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-               >
-                   Limpar Seleção
-               </button>
+            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
+                <button 
+                   onClick={() => {
+                       setSelection([]);
+                       if (setTrevosSelection) setTrevosSelection([]);
+                   }}
+                   className="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                    Limpar Tudo
+                </button>
            </div>
         </div>
         

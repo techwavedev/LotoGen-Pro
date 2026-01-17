@@ -24,7 +24,7 @@ import {
 /**
  * Gera todas as k-combinações de um array
  */
-function getCombinations<T>(arr: T[], k: number): T[][] {
+export function getCombinations<T>(arr: T[], k: number): T[][] {
   if (k === 0) return [[]];
   if (arr.length === 0) return [];
   

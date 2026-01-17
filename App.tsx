@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload } from 'lucide-react';
 import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS, CoveringDesignConfig, DEFAULT_COVERING_CONFIG, CoveringDesignResult, HistoryEntry } from './types';
 import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended, generateCombinatorialGames } from './services/lotteryService';
-import { generateCoveringDesign } from './services/coveringDesigns';
+import { generateCoveringDesign, getCombinations } from './services/coveringDesigns';
 import * as analytics from './utils/analytics';
 import GameTicket from './components/GameTicket';
 import SettingsPanel from './components/SettingsPanel';
@@ -29,6 +29,7 @@ function App() {
   const [gamesCount, setGamesCount] = useState<number>(5);
   const [mode, setMode] = useState<'smart' | 'combinatorial'>('smart');
   const [combinatorialSelection, setCombinatorialSelection] = useState<number[]>([]);
+  const [trevosSelection, setTrevosSelection] = useState<number[]>([]);
   const [exclusionMode, setExclusionMode] = useState(false); // For Lotomania: select numbers to EXCLUDE
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -207,6 +208,7 @@ function App() {
     // Auto-enable exclusion mode for Lotomania (gameSize >= 50)
     setExclusionMode(lottery.gameSize >= 50);
     setCombinatorialSelection([]); // Clear selection when lottery changes
+    setTrevosSelection([]); // Clear trevos selection
   }, [lottery]);
 
   // Auto-configure "Best Static Defaults" when lottery changes
@@ -410,7 +412,28 @@ function App() {
            // Use the new covering design service based on config
            try {
              const result = generateCoveringDesign(numbersForGeneration, lottery, coveringConfig);
-             const gamesWithExtras = ensureExtras(result.games);
+             
+             // Handle Trevos Distribution (Strategy: Round Robin of Combinations)
+             let gamesWithExtras = result.games;
+             
+             if (lottery.hasExtras && trevosSelection.length >= (lottery.extrasGameSize || 2)) {
+                  const offset = lottery.extrasOffset || 100;
+                  // Generate all combinations of the selected trevos
+                  const trevosCombinations = getCombinations(trevosSelection, lottery.extrasGameSize || 2);
+                  
+                  if (trevosCombinations.length > 0) {
+                      gamesWithExtras = result.games.map((game, idx) => {
+                          const pair = trevosCombinations[idx % trevosCombinations.length];
+                          // Sort main numbers and add trevos (with offset)
+                          return [...game.sort((a,b) => a - b), ...pair.map(n => n + offset)];
+                      });
+                  } else {
+                      gamesWithExtras = ensureExtras(result.games);
+                  }
+             } else {
+                 gamesWithExtras = ensureExtras(result.games);
+             }
+
              setGeneratedGames(gamesWithExtras);
              setCoveringResult({ ...result, games: gamesWithExtras });
              setLoadingMessage('');
@@ -839,6 +862,8 @@ function App() {
                 coveringConfig={coveringConfig}
                 setCoveringConfig={setCoveringConfig}
                 abbreviatedStats={coveringResult ? coveringResult.stats : null}
+                trevosSelection={trevosSelection}
+                setTrevosSelection={setTrevosSelection}
              />
           )}
 
