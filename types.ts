@@ -2,7 +2,7 @@ export type LotteryNumber = number;
 
 export type Game = LotteryNumber[];
 
-export type LotteryId = 'lotofacil' | 'megasena' | 'quina' | 'lotomania';
+export type LotteryId = 'lotofacil' | 'megasena' | 'quina' | 'lotomania' | 'duplasena' | 'timemania' | 'diadesorte';
 
 export interface LotteryDefinition {
   id: LotteryId;
@@ -75,6 +75,48 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     colorName: 'orange',
     downloadParam: 'lm',
     basePrice: 3.00
+  },
+  duplasena: {
+    id: 'duplasena',
+    name: 'Dupla Sena',
+    totalNumbers: 50,
+    gameSize: 6,
+    maxGameSize: 15,
+    drawSize: 6,
+    cols: 10,
+    visualCols: 5,
+    color: '#A61324',
+    colorName: 'red',
+    downloadParam: 'ds',
+    basePrice: 3.00
+  },
+  timemania: {
+    id: 'timemania',
+    name: 'Timemania',
+    totalNumbers: 80,
+    gameSize: 7,
+    maxGameSize: 10,
+    drawSize: 7,
+    cols: 10,
+    visualCols: 5,
+    color: '#3EA86D',
+    colorName: 'green',
+    downloadParam: 'tm',
+    basePrice: 3.50
+  },
+  diadesorte: {
+    id: 'diadesorte',
+    name: 'Dia de Sorte',
+    totalNumbers: 31,
+    gameSize: 7,
+    maxGameSize: 15,
+    drawSize: 7,
+    cols: 7,
+    visualCols: 5,
+    color: '#FFAB00',
+    colorName: 'amber',
+    downloadParam: 'dd',
+    basePrice: 2.50
   }
 };
 
@@ -355,6 +397,27 @@ export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {
     edges: { min: 12, max: 24, hint: "12 a 24 na borda (Média 18)" },
     spread: { min: 0.5, hint: "Espalhe" },
     fibonacci: { min: 2, available: 16, hint: "3 a 8" }
+  },
+  duplasena: {
+    primes: { min: 1, max: 3, hint: "1 a 3 primos (similar à Mega-Sena)" },
+    decades: { min: 3, total: 5, hint: "Distribua em 3+ décadas" },
+    edges: { min: 2, max: 4, hint: "Equilíbrio centro/borda" },
+    spread: { min: 4, hint: "Espalhe bem os números" },
+    fibonacci: { min: 0, available: 8, hint: "0 a 2" }
+  },
+  timemania: {
+    primes: { min: 1, max: 4, hint: "1 a 4 primos (em 7 números)" },
+    decades: { min: 3, total: 8, hint: "Distribua em 3+ décadas" },
+    edges: { min: 2, max: 5, hint: "2 a 5 na borda" },
+    spread: { min: 4, hint: "Espalhe bem os números" },
+    fibonacci: { min: 0, available: 10, hint: "0 a 2" }
+  },
+  diadesorte: {
+    primes: { min: 1, max: 4, hint: "1 a 4 primos (em 7 números)" },
+    decades: { min: 2, total: 4, hint: "Distribua em 2+ décadas (1-10, 11-20, 21-30, 31)" },
+    edges: { min: 2, max: 5, hint: "2 a 5 na borda" },
+    spread: { min: 3, hint: "Espalhe bem os números" },
+    fibonacci: { min: 0, available: 6, hint: "0 a 2 (1,2,3,5,8,13,21)" }
   }
 };
 

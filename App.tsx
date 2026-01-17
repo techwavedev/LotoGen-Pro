@@ -419,20 +419,20 @@ function App() {
             </div>
 
             {/* Lottery Selector Tabs */}
-            <div className="bg-white/10 p-1.5 rounded-xl backdrop-blur-md inline-flex overflow-x-auto max-w-full no-scrollbar">
+            <div className="bg-white/10 p-1.5 rounded-xl backdrop-blur-md flex flex-wrap gap-1 max-w-full">
               {Object.values(LOTTERIES).map((l) => (
                 <button
                   key={l.id}
                   onClick={() => handleLotteryChange(l.id)}
                   className={clsx(
-                    "px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap flex items-center gap-2",
+                    "px-5 py-2.5 rounded-lg font-bold text-sm md:text-base transition-all whitespace-nowrap flex items-center justify-center gap-2 min-h-[44px]",
                     currentLotteryId === l.id
                       ? "bg-white shadow-lg scale-105"
                       : "text-white/70 hover:bg-white/10 hover:text-white"
                   )}
                   style={{ color: currentLotteryId === l.id ? l.color : undefined }}
                 >
-                  {currentLotteryId === l.id && <CircleDot className="w-3 h-3" />}
+                  {currentLotteryId === l.id && <CircleDot className="w-4 h-4" />}
                   {l.name}
                 </button>
               ))}
