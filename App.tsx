@@ -383,14 +383,16 @@ function App() {
 
       setOperationStep('Analisando padrões históricos...');
       setHistory(data);
-      
+
       // Map for analysis
       const stats = analyzeHistoryExtended(data.map(h => h.numbers), lottery);
       setAnalysis(stats);
+      setOperationStep('');
 
     } catch (err: any) {
       console.error(err);
       setError('Erro ao ler arquivo: ' + (err.message || 'Formato inválido'));
+      setOperationStep('');
     } finally {
       setIsLoading(false);
       // Reset input value to allow re-upload of same file if needed
