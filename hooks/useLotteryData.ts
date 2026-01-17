@@ -18,8 +18,8 @@ interface UseLotteryDataResult {
   error: string | null;
   refetchHistory: () => Promise<void>;
   clearError: () => void;
-  setHistory: React.Dispatch<React.SetStateAction<HistoryEntry[]>>;
-  setAnalysis: React.Dispatch<React.SetStateAction<ExtendedHistoryAnalysis | null>>;
+  setHistory: Dispatch<SetStateAction<HistoryEntry[]>>;
+  setAnalysis: Dispatch<SetStateAction<ExtendedHistoryAnalysis | null>>;
 }
 
 /**
@@ -294,6 +294,8 @@ export function useLotteryData({
     isSyncing,
     error,
     refetchHistory,
-    clearError
+    clearError,
+    setHistory,
+    setAnalysis
   };
 }
