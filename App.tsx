@@ -332,6 +332,29 @@ function App() {
     }
   };
 
+  // Helper to append extras (like Trevos) to generated games if missing
+  const ensureExtras = (games: Game[]) => {
+      if (!lottery.hasExtras || !lottery.extrasTotalNumbers || !lottery.extrasGameSize) return games;
+      const offset = lottery.extrasOffset || 100;
+      
+      return games.map(game => {
+          // Check if game already has extras (numbers > 100)
+          // Note: This check assumes extras are always > 100 which is true for our implementation
+          const hasExtras = game.some(n => n > 100);
+          if (hasExtras) return game;
+
+          // Generate random extras
+          const extras = new Set<number>();
+          while (extras.size < (lottery.extrasGameSize || 0)) {
+              extras.add(Math.floor(Math.random() * (lottery.extrasTotalNumbers || 0)) + 1);
+          }
+          
+          const newGame = [...game]; // Copy
+          extras.forEach(e => newGame.push(e + offset));
+          return newGame;
+      });
+  };
+
   const handleGenerate = async (countOverride?: number) => {
     setIsLoading(true);
     setLoadingMessage('Processando...');
@@ -351,8 +374,9 @@ function App() {
            // Use the new covering design service based on config
            try {
              const result = generateCoveringDesign(numbersForGeneration, lottery, coveringConfig);
-             setGeneratedGames(result.games);
-             setCoveringResult(result);
+             const gamesWithExtras = ensureExtras(result.games);
+             setGeneratedGames(gamesWithExtras);
+             setCoveringResult({ ...result, games: gamesWithExtras });
              setLoadingMessage('');
              analytics.trackGenerateGames({ 
                lottery: lottery.id, 
@@ -364,7 +388,8 @@ function App() {
              // Fallback to original if new service fails
              console.warn('Covering design failed, falling back:', coveringError.message);
              const games = generateCombinatorialGames(numbersForGeneration, lottery);
-             setGeneratedGames(games);
+             const gamesWithExtras = ensureExtras(games);
+             setGeneratedGames(gamesWithExtras);
              setCoveringResult(null);
              setLoadingMessage('');
              analytics.trackGenerateGames({ lottery: lottery.id, mode: 'combinatorial', count: games.length });
@@ -477,7 +502,7 @@ function App() {
       <main className="max-w-5xl mx-auto px-4 -mt-8">
         
         {/* Beta Testing Banner for New Lotteries */}
-        {['duplasena', 'timemania', 'diadesorte'].includes(currentLotteryId) && (
+        {['duplasena', 'timemania', 'diadesorte', 'maismilionaria'].includes(currentLotteryId) && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 animate-fade-in">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-amber-100 rounded-lg">
@@ -486,7 +511,7 @@ function App() {
               <div>
                 <h4 className="font-semibold text-amber-800 mb-1">🧪 Recurso em Fase de Testes</h4>
                 <p className="text-sm text-amber-700">
-                  Os geradores para <strong>Dupla Sena</strong>, <strong>Timemania</strong>, <strong>Dia de Sorte</strong>, <strong>Super Sete</strong> e <strong>+Milionária</strong> foram recentemente adicionados e estão em fase de testes.
+                  Os geradores para <strong>Dupla Sena</strong>, <strong>Timemania</strong>, <strong>Dia de Sorte</strong> e <strong>+Milionária</strong> foram recentemente adicionados e estão em fase de testes.
                   Algumas funcionalidades podem não estar totalmente disponíveis. Estamos trabalhando para melhorar continuamente!
                 </p>
               </div>

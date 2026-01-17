@@ -1,4 +1,5 @@
 import React from 'react';
+import { Clover } from 'lucide-react';
 import { Game, LotteryDefinition } from '../types';
 import clsx from 'clsx';
 
@@ -75,13 +76,46 @@ const GameTicket: React.FC<GameTicketProps> = ({ game, index, lottery }) => {
           );
         })}
       </div>
+
+      {/* Extras / Trevos Section */}
+      {lottery.hasExtras && (
+        <div className="mt-3 pt-2 border-t border-dashed border-gray-200">
+           <h4 className="text-[10px] font-bold text-gray-400 uppercase mb-2 flex items-center justify-center gap-1">
+              <Clover className="w-3 h-3" /> {lottery.extrasName || 'Trevos'}
+           </h4>
+           <div className="flex gap-2 justify-center flex-wrap">
+              {Array.from({ length: lottery.extrasTotalNumbers || 6 }, (_, i) => i + 1).map((num) => {
+                 const offset = lottery.extrasOffset || 100;
+                 const isSelected = game.includes(num + offset);
+                 return (
+                    <div
+                      key={num}
+                      className={clsx(
+                        "flex items-center justify-center rounded-full font-bold transition-all select-none border w-8 h-8 text-xs",
+                        isSelected
+                          ? "text-white shadow-sm border-transparent transform scale-110"
+                          : "bg-gray-50 text-gray-400 border-gray-100"
+                      )}
+                      style={isSelected ? { backgroundColor: lottery.color } : undefined}
+                    >
+                      {num}
+                    </div>
+                 );
+              })}
+           </div>
+        </div>
+      )}
       
       <div className="mt-4 pt-3 border-t border-gray-100 flex justify-between text-xs text-gray-500 font-medium">
         <div className="flex gap-3">
-            <span>Pares: <strong className="text-gray-700">{game.filter(n => n % 2 === 0).length}</strong></span>
-            <span>Ímpares: <strong className="text-gray-700">{game.filter(n => n % 2 !== 0).length}</strong></span>
+            <span>Pares: <strong className="text-gray-700">
+                {game.filter(n => (n <= lottery.totalNumbers) && n % 2 === 0).length}
+            </strong></span>
+            <span>Ímpares: <strong className="text-gray-700">
+                {game.filter(n => (n <= lottery.totalNumbers) && n % 2 !== 0).length}
+            </strong></span>
         </div>
-        <span className="text-gray-400">Soma: {game.reduce((a,b) => a+b, 0)}</span>
+        <span className="text-gray-400">Soma: {game.filter(n => n <= lottery.totalNumbers).reduce((a,b) => a+b, 0)}</span>
       </div>
     </div>
   );
