@@ -235,6 +235,11 @@ export interface HistoryAnalysis {
   hotNumbers: number[]; // The top N numbers
   balanceStats: BalanceStat[]; // Distribution of Hot vs Cold in history
   repetitionStats: RepetitionStats; // New repetition stats
+  extrasStats?: {
+    mostFrequent: NumberStat[];
+    leastFrequent: NumberStat[];
+    allStats: NumberStat[];
+  };
 }
 
 // ============ ADVANCED STATISTICAL ANALYSIS TYPES ============

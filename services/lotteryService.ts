@@ -330,11 +330,23 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
   const totalGames = history.length;
   const counts = new Array(lottery.totalNumbers + 1).fill(0); 
 
+  // Extras setup
+  const hasExtras = !!lottery.hasExtras;
+  const extrasLimit = lottery.extrasTotalNumbers || 0;
+  const extrasOffset = lottery.extrasOffset || 0;
+  const extrasCounts = hasExtras ? new Array(extrasLimit + 1).fill(0) : [];
+
   // Count occurrences
   history.forEach(game => {
     game.forEach(num => {
       if (num >= 1 && num <= lottery.totalNumbers) {
         counts[num]++;
+      } else if (hasExtras && num > extrasOffset) {
+         // Logic for extras
+         const val = num - extrasOffset;
+         if (val >= 1 && val <= extrasLimit) {
+            extrasCounts[val]++;
+         }
       }
     });
   });
@@ -344,13 +356,31 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
     stats.push({
       number: i,
       count: counts[i],
-      percentage: ((counts[i] / totalGames) * 100).toFixed(2)
+      percentage: totalGames > 0 ? ((counts[i] / totalGames) * 100).toFixed(2) : '0.00'
     });
   }
 
   // Clone for sorting
   const mostFrequent = [...stats].sort((a, b) => b.count - a.count);
   const leastFrequent = [...stats].sort((a, b) => a.count - b.count);
+
+  // Extras Stats
+  let extrasStats;
+  if (hasExtras) {
+      const eStats: NumberStat[] = [];
+      for(let i=1; i<=extrasLimit; i++) {
+          eStats.push({
+              number: i,
+              count: extrasCounts[i],
+              percentage: totalGames > 0 ? ((extrasCounts[i] / totalGames) * 100).toFixed(2) : '0.00'
+          });
+      }
+      extrasStats = {
+          allStats: eStats,
+          mostFrequent: [...eStats].sort((a,b) => b.count - a.count),
+          leastFrequent: [...eStats].sort((a,b) => a.count - b.count)
+      };
+  }
 
   // Identify Hot Numbers (Top ~20% of total numbers or fixed logic)
   const hotCountLimit = Math.max(10, Math.floor(lottery.totalNumbers * 0.4));
@@ -362,8 +392,9 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
   
   history.forEach(game => {
     let hotCount = 0;
+    // Only count MAIN numbers for hot/cold balance
     game.forEach(num => {
-      if (hotNumbersSet.has(num)) hotCount++;
+      if (num <= lottery.totalNumbers && hotNumbersSet.has(num)) hotCount++;
     });
     balanceCounts[hotCount] = (balanceCounts[hotCount] || 0) + 1;
   });
@@ -376,7 +407,7 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
         hotCount,
         coldCount: lottery.drawSize - hotCount, // Using drawSize here for balance stats context
         occurrences: count,
-        percentage: ((count / totalGames) * 100).toFixed(1)
+        percentage: totalGames > 0 ? ((count / totalGames) * 100).toFixed(1) : '0.0'
       };
     })
     .sort((a, b) => b.occurrences - a.occurrences);
@@ -394,9 +425,16 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
       let matches = 0;
       let p1 = 0;
       let p2 = 0;
-      const g1 = history[i];
-      const g2 = history[j];
+      // Filter out extras for repetition check (or keeping them?)
+      // Usually users care about main numbers repetition.
+      // If we include trevos, "duplicates" means exact match of everything.
+      // +Milionaria: 6 main + 2 trevos.
+      // Let's filter MAIN numbers for this standard repetition metric to correspond to "drawSize"
       
+      const g1 = history[i].filter(n => n <= lottery.totalNumbers);
+      const g2 = history[j].filter(n => n <= lottery.totalNumbers);
+      
+      // Reset logic for filtered arrays
       while (p1 < g1.length && p2 < g2.length) {
         if (g1[p1] === g2[p2]) { matches++; p1++; p2++; }
         else if (g1[p1] < g2[p2]) { p1++; }
@@ -427,7 +465,8 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
       duplicates,
       nearMiss1: nearMiss1,
       nearMiss2: nearMiss2
-    }
+    },
+    extrasStats 
   };
 };
 

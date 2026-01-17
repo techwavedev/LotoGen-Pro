@@ -237,7 +237,33 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
         </div>
       </div>
 
+      
+      {/* EXTRAS Statistics Section (Trevos) */}
+      {lottery.hasExtras && analysis.extrasStats && (
+        <div className="p-4 md:p-6 border-b border-gray-100 bg-white">
+             <div className="flex items-center justify-between mb-4">
+                <h3 className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
+                  <BarChart2 className="w-4 h-4 text-gray-400" />
+                  Frequência de {lottery.extrasName || 'Extras'}
+                </h3>
+             </div>
 
+             <div className="flex gap-3 flex-wrap justify-center sm:justify-start">
+                {analysis.extrasStats.allStats.map(stat => (
+                    <div key={stat.number} className="flex flex-col items-center p-3 border border-gray-100 rounded-lg hover:shadow-sm bg-gray-50 hover:bg-white transition-all min-w-[80px]">
+                        <span 
+                            className="w-8 h-8 flex items-center justify-center rounded-full text-sm font-bold shadow-sm mb-1 text-white border-2 border-white"
+                            style={{ backgroundColor: '#10b981' }} // Trevos are Green usually
+                        >
+                            {stat.number}
+                        </span>
+                        <span className="text-sm font-bold text-gray-700">{stat.percentage}%</span>
+                        <span className="text-xs text-gray-400">{stat.count}x</span>
+                    </div>
+                ))}
+             </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2">
         {/* Hot/Cold Tables */}
