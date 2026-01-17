@@ -40,6 +40,12 @@ function App() {
   const [coveringResult, setCoveringResult] = useState<CoveringDesignResult | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
+
+  // Progress tracking for long operations
+  const [operationProgress, setOperationProgress] = useState(0);
+  const [operationTotal, setOperationTotal] = useState(0);
+  const [operationStep, setOperationStep] = useState('');
+  const [showResultsSkeleton, setShowResultsSkeleton] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const downloadFormRef = useRef<HTMLFormElement>(null);
@@ -408,29 +414,41 @@ function App() {
     setLoadingMessage('Processando...');
     setError(null);
     setGeneratedGames([]);
+    setOperationProgress(0);
+    setOperationStep('');
+
+    // Show skeleton for results area when generating
+    setShowResultsSkeleton(true);
 
     setTimeout(async () => {
       try {
         if (mode === 'combinatorial') {
            setLoadingMessage('Gerando fechamento combinatório...');
+           setOperationStep('Calculando combinações...');
+
            // Combinatorial Mode
            // For exclusion mode: calculate active pool (all numbers EXCEPT selection)
            const numbersForGeneration = exclusionMode
                ? Array.from({ length: lottery.totalNumbers }, (_, i) => i + 1).filter(n => !combinatorialSelection.includes(n))
                : combinatorialSelection;
-           
+
+           setOperationTotal(numbersForGeneration.length);
+
            // Use the new covering design service based on config
            try {
+             setOperationStep('Gerando fechamento matemático...');
              const result = generateCoveringDesign(numbersForGeneration, lottery, coveringConfig);
-             
+             setOperationProgress(numbersForGeneration.length);
+
              // Handle Trevos Distribution (Strategy: Round Robin of Combinations)
+             setOperationStep('Adicionando trevos...');
              let gamesWithExtras = result.games;
-             
+
              if (lottery.hasExtras && trevosSelection.length >= (lottery.extrasGameSize || 2)) {
                   const offset = lottery.extrasOffset || 100;
                   // Generate all combinations of the selected trevos
                   const trevosCombinations = getCombinations(trevosSelection, lottery.extrasGameSize || 2);
-                  
+
                   if (trevosCombinations.length > 0) {
                       gamesWithExtras = result.games.map((game, idx) => {
                           const pair = trevosCombinations[idx % trevosCombinations.length];
@@ -444,60 +462,80 @@ function App() {
                  gamesWithExtras = ensureExtras(result.games);
              }
 
+             setOperationStep('Finalizando...');
              setGeneratedGames(gamesWithExtras);
              setCoveringResult({ ...result, games: gamesWithExtras });
              setLoadingMessage('');
-             analytics.trackGenerateGames({ 
-               lottery: lottery.id, 
-               mode: 'combinatorial', 
+             setOperationStep('');
+             setShowResultsSkeleton(false);
+             analytics.trackGenerateGames({
+               lottery: lottery.id,
+               mode: 'combinatorial',
                count: result.games.length,
-               wheelType: coveringConfig.wheelType 
+               wheelType: coveringConfig.wheelType
              });
            } catch (coveringError: any) {
              // Fallback to original if new service fails
              console.warn('Covering design failed, falling back:', coveringError.message);
+             setOperationStep('Usando método alternativo...');
              const games = generateCombinatorialGames(numbersForGeneration, lottery);
              const gamesWithExtras = ensureExtras(games);
              setGeneratedGames(gamesWithExtras);
              setCoveringResult(null);
              setLoadingMessage('');
+             setOperationStep('');
+             setShowResultsSkeleton(false);
              analytics.trackGenerateGames({ lottery: lottery.id, mode: 'combinatorial', count: games.length });
            }
         } else {
             // Smart/Simple/Multiple Mode
             const targetCount = typeof countOverride === 'number' ? countOverride : gamesCount;
             setLoadingMessage(targetCount === 1 ? 'Gerando 1 palpite...' : 'Gerando combinações...');
-            
+            setOperationStep('Analisando histórico...');
+            setOperationTotal(targetCount);
+
             const hotNumbers = analysis ? analysis.hotNumbers : [];
-            
+
             // For Surpresinha, we use minimal config (random)
             // For Multiple, we pass the selectedGameSize
             const effectiveConfig = betType === 'surpresinha' ? DEFAULT_EXTENDED_CONFIG : config;
             const effectiveSize = betType === 'multiple' ? selectedGameSize : lottery.gameSize;
-            
+
             // Pass ONLY the game arrays to generateGamesExtended
             const gamesHistory = history.map(h => h.numbers);
 
+            setOperationStep('Gerando jogos otimizados...');
             const games = await generateGamesExtended(
                 targetCount, gamesHistory, effectiveConfig, lottery, hotNumbers, analysis || undefined, effectiveSize
             );
-            
+
+            setOperationProgress(targetCount);
+            setOperationStep('Adicionando números extras...');
             const gamesWithExtras = ensureExtras(games);
+
+            setOperationStep('Finalizando...');
             setGeneratedGames(gamesWithExtras);
+            setOperationStep('');
+            setShowResultsSkeleton(false);
+
             analytics.trackGenerateGames({ lottery: lottery.id, mode: 'smart', count: games.length, betType });
             if (games.length < targetCount) {
              setError(`Conseguimos gerar apenas ${games.length} jogos com esses filtros restritivos.`);
             }
         }
-        
+
         // Track games (fire and forget)
         // Note: we can't access 'games' here easily without refactoring, so we skip tracking for now or do it inside the if blocks
         // For simplicity, tracking is omitted for this iteration.
 
       } catch (e: any) {
         setError(e.message || 'Erro na geração.');
+        setShowResultsSkeleton(false);
+        setOperationStep('');
       } finally {
         setIsLoading(false);
+        setOperationProgress(0);
+        setOperationTotal(0);
       }
     }, 100);
   };
@@ -894,7 +932,7 @@ function App() {
                 {isLoading ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    {loadingMessage}
+                    <span>{loadingMessage}</span>
                   </>
                 ) : (
                   <>
@@ -903,6 +941,23 @@ function App() {
                   </>
                 )}
               </div>
+
+              {/* Progress bar for operation progress */}
+              {isLoading && operationTotal > 0 && (
+                <div className="mt-3 bg-white/20 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-white h-full rounded-full transition-all duration-300 ease-out"
+                    style={{ width: `${Math.min(100, (operationProgress / operationTotal) * 100)}%` }}
+                  />
+                </div>
+              )}
+
+              {/* Current step indicator */}
+              {isLoading && operationStep && (
+                <div className="mt-2 text-center text-white/90 text-sm font-medium">
+                  {operationStep}
+                </div>
+              )}
             </button>
             {error && (
               <div className="mt-4 p-4 bg-red-50 text-red-700 rounded-xl flex items-center gap-3 border border-red-100 animate-fade-in">

@@ -368,12 +368,16 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
   // Extras Stats - Análise Avançada para Trevos (+Milionária)
   let extrasStats: ExtrasAdvancedStats | undefined;
   if (hasExtras) {
+      // Calculate total number of trevos drawn across all games
+      const extrasDrawSize = lottery.extrasDrawSize || 2;
+      const totalExtrasDraws = totalGames * extrasDrawSize;
+
       const eStats: NumberStat[] = [];
       for(let i=1; i<=extrasLimit; i++) {
           eStats.push({
               number: i,
               count: extrasCounts[i],
-              percentage: totalGames > 0 ? ((extrasCounts[i] / totalGames) * 100).toFixed(2) : '0.00'
+              percentage: totalExtrasDraws > 0 ? ((extrasCounts[i] / totalExtrasDraws) * 100).toFixed(2) : '0.00'
           });
       }
       
