@@ -44,19 +44,30 @@ const getGridStructure = (lottery: LotteryDefinition) => {
   return { lines, columns };
 };
 
-const parseCell = (cell: any): number | null => {
-  if (typeof cell === 'number') return Math.round(cell);
-  if (typeof cell === 'string') {
-      // Enhanced safety: Reject strings that look like dates (common in lottery CSVs)
-      if (cell.includes('/') || cell.includes(':') || (cell.includes('-') && cell.length > 4)) return null;
-      
-      const parsed = parseInt(cell.trim());
-      return isNaN(parsed) ? null : parsed;
-  }
-  return null;
-}
+// Helper to clean currency strings
+const parseCurrency = (val: any): number => {
+  if (typeof val === 'number') return val;
+  if (!val) return 0;
+  // Remove "R$", ".", and convert "," to "."
+  // Example: "R$ 1.234,56" -> 1234.56
+  const clean = String(val).replace(/[^\d,]/g, '').replace(',', '.');
+  return parseFloat(clean) || 0;
+};
 
-export const parseHistoryFile = async (file: File, lottery: LotteryDefinition): Promise<Game[]> => {
+// Helper for date parsing
+const parseDate = (val: any): string | undefined => {
+  if (typeof val === 'number') {
+      // Excel date serial
+      const date = new Date(Math.round((val - 25569)*86400*1000));
+      return date.toLocaleDateString('pt-BR');
+  }
+  if (typeof val === 'string') {
+      return val.trim();
+  }
+  return undefined;
+};
+
+export const parseHistoryFile = async (file: File, lottery: LotteryDefinition): Promise<HistoryEntry[]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -70,98 +81,157 @@ export const parseHistoryFile = async (file: File, lottery: LotteryDefinition): 
         // Convert to array of arrays
         const json = utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 
-        const validGames: Game[] = [];
+        const validEntries: HistoryEntry[] = [];
         
-        // --- 1. Header Detection Strategy (Aggressive) ---
-        let ballIndices: number[] = [];
+        // --- Header Detection ---
+        let mainBallIndices: number[] = [];
+        let trevoIndices: number[] = [];
         let headerRowIndex = -1;
-
-        // Patterns to look for in header row
-        const patterns = [
-            // Standard "Bola 1", "Bola1"
-            `bola`, `dezena`, `sorteio`, `num`,
-            // Short forms "d1", "b1", "1ª"
-            `d`, `b`, `n`, `ª` 
-        ];
+        
+        // Metadata Columns
+        let colDraw = -1; // Concurso
+        let colDate = -1; // Data Sorteio
+        let colAccumulated = -1; // Acumulado ?
+        
+        // Prize Columns (Faixa 1 is usually the Jackpot)
+        // We'll map tier -> { winnersCol, prizeCol }
+        const prizeColumns = new Map<number, { winners: number, prize: number }>();
 
         // Scan first 30 rows for headers
         for(let i=0; i<Math.min(json.length, 30); i++) {
             const row = json[i];
-            const potentialIndices: number[] = [];
+            const potentialMainIndices: number[] = [];
+            const potentialTrevoIndices: number[] = [];
 
-            // Check if this row has headers for balls 1..drawSize
-            for(let b=1; b<=lottery.drawSize; b++) {
-                 // Try to find a column for ball 'b'
-                 const index = row.findIndex(cell => {
-                    const str = String(cell).toLowerCase().trim()
-                        .replace(/[°ºª]/g, '') // remove ordinal indicators
-                        .replace(/\s+/g, '');  // remove spaces
+            if (!row || row.length === 0) continue;
+
+            row.forEach((cellRaw, colIdx) => {
+                const cell = String(cellRaw).toLowerCase().trim()
+                    .replace(/[°ºª]/g, '')
+                    .replace(/\s+/g, ''); // "bola 1" -> "bola1"
+
+                // 1. Detect Metadata
+                if (cell === 'concurso' || cell === 'conc') colDraw = colIdx;
+                if (cell === 'data' || cell === 'datasorteio' || cell === 'dt_sorteio') colDate = colIdx;
+                if (cell === 'acumulado') colAccumulated = colIdx;
+
+                // 2. Detect Prize Columns (Ganhadores/Rateio)
+                // Common formats: "Ganhadores_Faixa_1", "Rateio_Faixa_1", "Ganhadores 6 acertos", "Premio 6 acertos"
+                // Using generic "Faixa X" or specific lottery terms requires regex or flexible matching
+                if (cell.includes('ganhadores') || cell.includes('ganh')) {
+                    // Try to extract tier number
+                    // LotoFacil: "Ganhadores 15 acertos" -> Tier 1
+                    // Generic: "Ganhadores Faixa 1" -> Tier 1
+                    // Map logic: 
+                    // Lotofacil (15 nums): Tier 1 = 15 hits
+                    // Let's rely on explicit "faixa 1" or implicit "max hits"?
+                    // For now, let's look for "faixa1" or just "15acertos"
                     
-                    // Checks: "bola1", "dezena1", "1dezena", "1" (if strictly numeric header)
-                    return (
-                        str === `bola${b}` || 
-                        str === `dezena${b}` || 
-                        str === `${b}dezena` || 
-                        str === `b${b}` || 
-                        str === `d${b}` ||
-                        str === `n${b}` ||
-                        str === `num${b}` ||
-                        str === `numero${b}` ||
-                        str === `${b}` // Dangerous, but handled by context check below
-                    );
-                 });
+                    let tier = -1;
+                    if (cell.includes('faixa1') || cell.includes(`${lottery.drawSize}acertos`)) tier = 1;
+                    else if (cell.includes('faixa2') || cell.includes(`${lottery.drawSize-1}acertos`)) tier = 2;
+                    else if (cell.includes('faixa3') || cell.includes(`${lottery.drawSize-2}acertos`)) tier = 3;
+                    
+                    if (tier > 0) {
+                        const current = prizeColumns.get(tier) || { winners: -1, prize: -1 };
+                        current.winners = colIdx;
+                        prizeColumns.set(tier, current);
+                    }
+                }
 
-                 if (index !== -1) {
-                     potentialIndices.push(index);
-                 }
-            }
+                if (cell.includes('rateio') || cell.includes('premio') || cell.includes('valor')) {
+                     let tier = -1;
+                    if (cell.includes('faixa1') || cell.includes(`${lottery.drawSize}acertos`)) tier = 1;
+                    else if (cell.includes('faixa2') || cell.includes(`${lottery.drawSize-1}acertos`)) tier = 2;
+                    else if (cell.includes('faixa3') || cell.includes(`${lottery.drawSize-2}acertos`)) tier = 3;
+                    
+                    if (tier > 0) {
+                        const current = prizeColumns.get(tier) || { winners: -1, prize: -1 };
+                        current.prize = colIdx;
+                        prizeColumns.set(tier, current);
+                    }
+                }
+
+                // 3. Detect Balls (Logic from before)
+                if (lottery.hasExtras) {
+                    if (cell.includes('trevo')) {
+                        potentialTrevoIndices.push(colIdx);
+                        return; 
+                    }
+                }
+
+                // Check for Main Balls
+                for (let b = 1; b <= lottery.drawSize; b++) {
+                    if (
+                        cell === `bola${b}` || 
+                        cell === `dezena${b}` || 
+                        cell === `${b}dezena` || 
+                        cell === `b${b}` || 
+                        cell === `d${b}` ||
+                        cell === `n${b}` ||
+                        cell === `num${b}` ||
+                        cell === `${b}` || 
+                        cell === `0${b}`
+                    ) {
+                        potentialMainIndices.push(colIdx);
+                    }
+                }
+            });
+
+            const uniqueMain = [...new Set(potentialMainIndices)];
             
-            // Only accept if we found exactly the number of balls needed, or close to it
-            // (Sometimes files have extra columns, but we need at least distinct columns for 1..drawSize)
-            const uniqueIndices = [...new Set(potentialIndices)];
-            if (uniqueIndices.length === lottery.drawSize) {
-                ballIndices = uniqueIndices;
+            if (uniqueMain.length >= lottery.drawSize) {
+                mainBallIndices = uniqueMain.slice(0, lottery.drawSize);
+                
+                if (lottery.hasExtras) {
+                     const uniqueTrevos = [...new Set(potentialTrevoIndices)];
+                     if (uniqueTrevos.length >= (lottery.extrasDrawSize || 2)) {
+                         trevoIndices = uniqueTrevos.slice(0, lottery.extrasDrawSize || 2);
+                     }
+                }
+                
                 headerRowIndex = i;
                 break;
             }
         }
 
-        // --- 2. Fallback: Content-Based Detection ---
-        // If headers failed, look for columns that LOOK like lottery numbers
-        if (ballIndices.length === 0) {
-            console.log("Header detection failed. Attempting content analysis...");
-            const columnScores = new Map<number, number>();
-            const startRow = Math.min(5, json.length - 1);
-            const endRow = Math.min(25, json.length);
-
-            // Scan a sample of rows
-            for (let i = startRow; i < endRow; i++) {
+        // --- Fallback if no Headers ---
+        // (Simplified fallback from before - focusing mainly on balls)
+        if (mainBallIndices.length === 0) {
+             // ... [Previous fallback logic would go here, omitting for brevity/focus on new request] ...
+             // For strict metadata support, headers are almost required.
+             // But we can fallback to just number sniffing.
+             console.log("Header metadata detection failed. Falling back to content sniffer.");
+             
+             // [Re-inserting the content sniffer for just balls]
+             const columnScores = new Map<number, number>();
+             const startRow = Math.min(5, json.length - 1);
+             const endRow = Math.min(25, json.length);
+             
+             for (let i = startRow; i < endRow; i++) {
                 const row = json[i];
                 if (!row) continue;
                 row.forEach((cell, colIdx) => {
                     const val = parseCell(cell);
-                    // Check if value is valid lottery number
                     if (val !== null && val >= 1 && val <= lottery.totalNumbers) {
                         columnScores.set(colIdx, (columnScores.get(colIdx) || 0) + 1);
                     }
                 });
-            }
-
-            // Select columns that had valid numbers in > 80% of sampled rows
-            const threshold = (endRow - startRow) * 0.8;
-            const validCols = Array.from(columnScores.entries())
+             }
+             
+             const threshold = (endRow - startRow) * 0.8;
+             const validCols = Array.from(columnScores.entries())
                 .filter(([_, score]) => score >= threshold)
-                .map(([colIdx]) => colIdx)
-                .sort((a, b) => a - b); // simple sort
-
-            // If we found enough columns, take the first N (where N is drawSize)
-            if (validCols.length >= lottery.drawSize) {
-                ballIndices = validCols.slice(0, lottery.drawSize);
-                headerRowIndex = startRow - 1; // Start reading from sample start
-            }
+                .map(([col]) => col)
+                .sort((a, b) => a - b);
+                
+             if (validCols.length >= lottery.drawSize) {
+                 mainBallIndices = validCols.slice(0, lottery.drawSize);
+                 headerRowIndex = startRow - 1;
+             }
         }
 
-        // --- 3. Process Rows ---
+        // --- Process Rows ---
         const startIndex = headerRowIndex !== -1 ? headerRowIndex + 1 : 0;
 
         for (let i = startIndex; i < json.length; i++) {
@@ -169,30 +239,71 @@ export const parseHistoryFile = async (file: File, lottery: LotteryDefinition): 
           if (!row || row.length === 0) continue;
 
           let numbers: number[] = [];
+          let trevos: number[] = [];
 
-          if (ballIndices.length > 0) {
-              // STRICT MODE: Read only from identified columns
-              numbers = ballIndices.map(idx => parseCell(row[idx])).filter((n): n is number => n !== null);
+          // Parse Numbers
+          if (mainBallIndices.length > 0) {
+              numbers = mainBallIndices.map(idx => parseCell(row[idx])).filter((n): n is number => n !== null);
+              if (lottery.hasExtras && trevoIndices.length > 0) {
+                  trevos = trevoIndices.map(idx => parseCell(row[idx])).filter((n): n is number => n !== null);
+              }
           } else {
-              // FINAL FALLBACK: Read row loosely (risky but necessary if all else fails)
-              numbers = row.map(cell => parseCell(cell)).filter((n): n is number => n !== null);
+               // Safe fallback
+               const allNums = row.map(cell => parseCell(cell)).filter((n): n is number => n !== null);
+               numbers = allNums.slice(0, lottery.gameSize);
           }
 
-          // --- LOTOMANIA FIX: Handle 0/00 ---
           if (lottery.id === 'lotomania') {
              numbers = numbers.map(n => n === 0 ? 100 : n);
           }
 
-          // Filter for valid range
-          const validNumbers = [...new Set(numbers.filter(n => n >= 1 && n <= lottery.totalNumbers))].sort((a, b) => a - b);
+          const validMain = [...new Set(numbers.filter(n => n >= 1 && n <= lottery.totalNumbers))].sort((a, b) => a - b);
+          
+          if (validMain.length === lottery.drawSize) {
+               // Extras Processing
+               if (lottery.hasExtras) {
+                   const offset = lottery.extrasOffset || 100;
+                   const validTrevos = [...new Set(trevos.filter(n => n >= 1 && n <= (lottery.extrasTotalNumbers || 6)))].sort((a, b) => a - b);
+                   
+                   if (validTrevos.length === (lottery.extrasDrawSize || 2)) {
+                       validTrevos.forEach(t => validMain.push(t + offset));
+                   } else if (validTrevos.length > 0) {
+                       // Partial read? Skip adding if incomplete?
+                       // Or just ignore.
+                   }
+               }
+               
+               // Extract Metadata
+               const prizes: PrizeInfo[] = [];
+               prizeColumns.forEach((cols, tier) => {
+                   if (cols.winners !== -1 && cols.prize !== -1) {
+                       prizes.push({
+                           tier,
+                           winners: parseInt(String(row[cols.winners] || 0)) || 0,
+                           prizeValue: parseCurrency(row[cols.prize])
+                       });
+                   }
+               });
+               
+               const drawNumber = colDraw !== -1 ? parseInt(String(row[colDraw])) : undefined;
+               const dateRaw = colDate !== -1 ? row[colDate] : undefined;
+               const drawDate = parseDate(dateRaw);
+               
+               const accumulated = colAccumulated !== -1 
+                   ? String(row[colAccumulated]).toLowerCase().includes('sim')
+                   : undefined;
 
-          // Check against drawSize (History size)
-          if (validNumbers.length === lottery.drawSize) {
-            validGames.push(validNumbers);
+               validEntries.push({
+                   numbers: validMain,
+                   drawNumber: isNaN(drawNumber!) ? undefined : drawNumber,
+                   date: drawDate,
+                   prizes: prizes.sort((a, b) => a.tier - b.tier),
+                   accumulated
+               });
           }
         }
 
-        resolve(validGames);
+        resolve(validEntries);
       } catch (err) {
         reject(err);
       }

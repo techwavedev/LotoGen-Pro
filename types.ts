@@ -147,6 +147,21 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
   }
 };
 
+export interface PrizeInfo {
+  tier: number; // 1 = Main prize, 2 = Second prize, etc.
+  winners: number;
+  prizeValue: number;
+}
+
+export interface HistoryEntry {
+  numbers: Game;
+  drawNumber?: number;
+  date?: string; // ISO or DD/MM/YYYY
+  prizes?: PrizeInfo[];
+  accumulated?: boolean;
+  accumulatedValue?: number;
+}
+
 
 export interface GenerationStats {
   totalAttempts: number;
