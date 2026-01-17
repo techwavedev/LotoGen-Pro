@@ -973,6 +973,240 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 )}
              </div>
           </div>
+
+          {/* Filtros de Trevos (+Milionária) */}
+          {lottery.hasExtras && (
+            <div className="space-y-4 p-4 rounded-lg md:col-span-2 lg:col-span-3 border bg-emerald-50 border-emerald-200">
+               <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-emerald-700">
+                     <span className="text-lg">🍀</span>
+                     Filtros de {lottery.extrasName || 'Trevos'} (Sorteio Separado)
+                  </h3>
+                  <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
+                    +Milionária
+                  </span>
+               </div>
+               
+               <p className="text-xs text-emerald-600 mb-3">
+                 A +Milionária tem dois sorteios independentes: números principais (50) e trevos (6).
+                 Configure filtros específicos para otimizar a seleção dos trevos.
+               </p>
+
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Hot/Cold Trevos */}
+                  <div className={clsx(
+                    "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                    config.useExtrasHotColdFilter ? "border-emerald-400 ring-1 ring-emerald-200" : "border-gray-200"
+                  )}>
+                    <label className="flex items-center gap-2 cursor-pointer mb-2">
+                      <input
+                        type="checkbox"
+                        checked={config.useExtrasHotColdFilter || false}
+                        onChange={() => toggle("useExtrasHotColdFilter")}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: '#10b981' }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">🔥 Trevos Quentes/Frios</span>
+                    </label>
+                    <div className="flex gap-2">
+                       <div className="flex-1">
+                          <label className="text-xs text-gray-500">Mín Quentes</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={lottery.extrasGameSize || 2}
+                            value={config.minHotExtras ?? 0}
+                            onChange={(e) => setNumber("minHotExtras", parseInt(e.target.value) || 0)}
+                            className={clsx("w-full text-sm border rounded px-2 py-1", !config.useExtrasHotColdFilter && "opacity-50")}
+                            disabled={!config.useExtrasHotColdFilter}
+                          />
+                       </div>
+                       <div className="flex-1">
+                          <label className="text-xs text-gray-500">Máx Quentes</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={lottery.extrasGameSize || 2}
+                            value={config.maxHotExtras ?? 2}
+                            onChange={(e) => setNumber("maxHotExtras", parseInt(e.target.value) || 2)}
+                            className={clsx("w-full text-sm border rounded px-2 py-1", !config.useExtrasHotColdFilter && "opacity-50")}
+                            disabled={!config.useExtrasHotColdFilter}
+                          />
+                       </div>
+                    </div>
+                    {extendedAnalysis?.extrasStats?.hotExtras && (
+                      <div className="text-[10px] text-emerald-600 mt-2 bg-emerald-50 p-1.5 rounded">
+                        🔥 Quentes: {extendedAnalysis.extrasStats.hotExtras.join(', ')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Delay Trevos */}
+                  <div className={clsx(
+                    "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                    config.useExtrasDelayFilter ? "border-emerald-400 ring-1 ring-emerald-200" : "border-gray-200"
+                  )}>
+                    <label className="flex items-center gap-2 cursor-pointer mb-2">
+                      <input
+                        type="checkbox"
+                        checked={config.useExtrasDelayFilter || false}
+                        onChange={() => toggle("useExtrasDelayFilter")}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: '#10b981' }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">⏰ Trevos Atrasados</span>
+                    </label>
+                    <div className="flex gap-2">
+                       <div className="flex-1">
+                          <label className="text-xs text-gray-500">Atraso &gt;</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="20"
+                            value={config.extrasDelayThreshold ?? 5}
+                            onChange={(e) => setNumber("extrasDelayThreshold", parseInt(e.target.value) || 5)}
+                            className={clsx("w-full text-sm border rounded px-2 py-1", !config.useExtrasDelayFilter && "opacity-50")}
+                            disabled={!config.useExtrasDelayFilter}
+                          />
+                       </div>
+                       <div className="flex-1">
+                          <label className="text-xs text-gray-500">Mín Atrasados</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={lottery.extrasGameSize || 2}
+                            value={config.minDelayedExtras ?? 0}
+                            onChange={(e) => setNumber("minDelayedExtras", parseInt(e.target.value) || 0)}
+                            className={clsx("w-full text-sm border rounded px-2 py-1", !config.useExtrasDelayFilter && "opacity-50")}
+                            disabled={!config.useExtrasDelayFilter}
+                          />
+                       </div>
+                    </div>
+                    {extendedAnalysis?.extrasStats?.delayStats && (
+                      <div className="text-[10px] text-amber-600 mt-2 bg-amber-50 p-1.5 rounded">
+                        ⏰ Mais atrasado: Trevo {extendedAnalysis.extrasStats.delayStats[0]?.number} ({extendedAnalysis.extrasStats.delayStats[0]?.delay} sorteios)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Repeat Trevos */}
+                  <div className={clsx(
+                    "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                    config.useExtrasRepeatFilter ? "border-emerald-400 ring-1 ring-emerald-200" : "border-gray-200"
+                  )}>
+                    <label className="flex items-center gap-2 cursor-pointer mb-2">
+                      <input
+                        type="checkbox"
+                        checked={config.useExtrasRepeatFilter || false}
+                        onChange={() => toggle("useExtrasRepeatFilter")}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: '#10b981' }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">🔄 Repetir do Último</span>
+                    </label>
+                    <div className="flex gap-2">
+                       <div className="flex-1">
+                          <label className="text-xs text-gray-500">Mín</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={lottery.extrasGameSize || 2}
+                            value={config.minExtrasRepeats ?? 0}
+                            onChange={(e) => setNumber("minExtrasRepeats", parseInt(e.target.value) || 0)}
+                            className={clsx("w-full text-sm border rounded px-2 py-1", !config.useExtrasRepeatFilter && "opacity-50")}
+                            disabled={!config.useExtrasRepeatFilter}
+                          />
+                       </div>
+                       <div className="flex-1">
+                          <label className="text-xs text-gray-500">Máx</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max={lottery.extrasGameSize || 2}
+                            value={config.maxExtrasRepeats ?? 2}
+                            onChange={(e) => setNumber("maxExtrasRepeats", parseInt(e.target.value) || 2)}
+                            className={clsx("w-full text-sm border rounded px-2 py-1", !config.useExtrasRepeatFilter && "opacity-50")}
+                            disabled={!config.useExtrasRepeatFilter}
+                          />
+                       </div>
+                    </div>
+                    {extendedAnalysis?.extrasStats?.repeatBetweenDraws && (
+                      <div className="text-[10px] text-blue-600 mt-2 bg-blue-50 p-1.5 rounded">
+                        📊 Média: {extendedAnalysis.extrasStats.repeatBetweenDraws.avgRepeats} trevos repetidos
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Evitar Pares Frequentes */}
+                  <div className={clsx(
+                    "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                    config.excludeHotExtrasPair ? "border-emerald-400 ring-1 ring-emerald-200" : "border-gray-200"
+                  )}>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.excludeHotExtrasPair || false}
+                        onChange={() => toggle("excludeHotExtrasPair")}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: '#10b981' }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">🚫 Evitar Pares Frequentes</span>
+                    </label>
+                    <p className="text-[10px] text-gray-500 ml-6 mt-1">
+                      Evita as 3 combinações de trevos mais comuns no histórico.
+                    </p>
+                    {extendedAnalysis?.extrasStats?.pairFrequency && (
+                      <div className="text-[10px] text-red-600 mt-2 bg-red-50 p-1.5 rounded">
+                        🚫 Top par: [{extendedAnalysis.extrasStats.pairFrequency[0]?.pair.join(', ')}] ({extendedAnalysis.extrasStats.pairFrequency[0]?.percentage}%)
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Equilíbrio Trevos */}
+                  <div className={clsx(
+                    "bg-white p-3 rounded-lg border shadow-sm transition-all",
+                    config.forceBalancedExtras ? "border-emerald-400 ring-1 ring-emerald-200" : "border-gray-200"
+                  )}>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={config.forceBalancedExtras || false}
+                        onChange={() => toggle("forceBalancedExtras")}
+                        className="w-4 h-4 rounded"
+                        style={{ accentColor: '#10b981' }}
+                      />
+                      <span className="text-sm font-medium text-gray-700">⚖️ Equilibrar Trevos</span>
+                    </label>
+                    <p className="text-[10px] text-gray-500 ml-6 mt-1">
+                      Força pelo menos 1 trevo de cada metade (1-3 e 4-6).
+                    </p>
+                  </div>
+               </div>
+
+               {/* Ação rápida para trevos */}
+               <div className="flex justify-end pt-2 border-t border-emerald-200">
+                  <button
+                    onClick={() => {
+                      setConfig(prev => ({
+                        ...prev,
+                        useExtrasHotColdFilter: true,
+                        minHotExtras: 0,
+                        maxHotExtras: 2,
+                        useExtrasDelayFilter: true,
+                        extrasDelayThreshold: 5,
+                        minDelayedExtras: 1,
+                        useExtrasRepeatFilter: false,
+                        excludeHotExtrasPair: true,
+                        forceBalancedExtras: true,
+                      }));
+                    }}
+                    className="text-sm font-medium px-4 py-2 rounded-lg transition-colors bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm"
+                  >
+                    🍀 Aplicar Filtros Recomendados para Trevos
+                  </button>
+               </div>
+            </div>
+          )}
       </div>
     </div>
   );

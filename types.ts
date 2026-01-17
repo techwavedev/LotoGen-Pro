@@ -526,7 +526,15 @@ export const LOTTERY_MANDEL_RECOMMENDATIONS: Record<LotteryId, any> = {
     decades: { min: 3, total: 5, hint: "Distribua em 3+ décadas" },
     edges: { min: 2, max: 4, hint: "Equilíbrio borda" },
     spread: { min: 4, hint: "Espalhe bem os números" },
-    fibonacci: { min: 0, available: 7, hint: "0 a 2" }
+    fibonacci: { min: 0, available: 7, hint: "0 a 2" },
+    // Recomendações específicas para Trevos
+    extras: {
+      hotCold: { minHot: 0, maxHot: 2, hint: "0 a 2 trevos quentes" },
+      delay: { threshold: 5, minDelayed: 1, hint: "1 trevo atrasado (>5 sorteios)" },
+      repeat: { min: 0, max: 1, hint: "0 a 1 repetido do último" },
+      balance: true, // Equilibrar 1-3 vs 4-6
+      avoidHotPairs: true // Evitar combinações muito frequentes
+    }
   }
 };
 

@@ -542,7 +542,7 @@ function App() {
       <main className="max-w-5xl mx-auto px-4 -mt-8">
         
         {/* Beta Testing Banner for New Lotteries */}
-        {['duplasena', 'timemania', 'diadesorte', 'maismilionaria'].includes(currentLotteryId) && (
+        {['duplasena', 'timemania', 'diadesorte'].includes(currentLotteryId) && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 animate-fade-in">
             <div className="flex items-start gap-3">
               <div className="p-2 bg-amber-100 rounded-lg">
@@ -551,8 +551,27 @@ function App() {
               <div>
                 <h4 className="font-semibold text-amber-800 mb-1">🧪 Recurso em Fase de Testes</h4>
                 <p className="text-sm text-amber-700">
-                  Os geradores para <strong>Dupla Sena</strong>, <strong>Timemania</strong>, <strong>Dia de Sorte</strong> e <strong>+Milionária</strong> foram recentemente adicionados e estão em fase de testes.
+                  Os geradores para <strong>Dupla Sena</strong>, <strong>Timemania</strong> e <strong>Dia de Sorte</strong> foram recentemente adicionados e estão em fase de testes.
                   Algumas funcionalidades podem não estar totalmente disponíveis. Estamos trabalhando para melhorar continuamente!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* +Milionária Feature Banner */}
+        {currentLotteryId === 'maismilionaria' && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4 animate-fade-in">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-emerald-100 rounded-lg">
+                <Clover className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-emerald-800 mb-1">🍀 +Milionária - Dois Sorteios em Um!</h4>
+                <p className="text-sm text-emerald-700">
+                  A <strong>+Milionária</strong> possui dois sorteios independentes: <strong>6 números</strong> de 1 a 50 + <strong>2 trevos</strong> de 1 a 6.
+                  O sistema agora oferece <strong>estatísticas avançadas</strong> e <strong>filtros específicos</strong> para os trevos, incluindo análise de atrasos, 
+                  pares mais frequentes, tendências e muito mais!
                 </p>
               </div>
             </div>
@@ -590,8 +609,11 @@ function App() {
                     Último Resultado - Concurso {latestResult.draw_number}
                     {latestResult.draw_date && <span className="ml-2 text-xs">({latestResult.draw_date})</span>}
                   </p>
+                  {/* Números Principais */}
                   <div className="flex flex-wrap gap-1.5 mt-1">
-                    {latestResult.numbers.map((num, idx) => (
+                    {latestResult.numbers
+                      .filter(num => parseInt(String(num)) <= lottery.totalNumbers)
+                      .map((num, idx) => (
                       <span
                         key={idx}
                         className="inline-flex items-center justify-center w-8 h-8 text-sm font-bold rounded-full text-white"
@@ -601,6 +623,48 @@ function App() {
                       </span>
                     ))}
                   </div>
+                  {/* Trevos para +Milionária */}
+                  {lottery.hasExtras && (
+                    <div className="mt-2 pt-2 border-t border-dashed border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                          <Clover className="w-3 h-3" />
+                          {lottery.extrasName || 'Trevos'}:
+                        </span>
+                        <div className="flex gap-1">
+                          {latestResult.numbers
+                            .filter(num => {
+                              const n = parseInt(String(num));
+                              return n > (lottery.extrasOffset || 100) || (n >= 1 && n <= (lottery.extrasTotalNumbers || 6) && !latestResult.numbers.filter(x => parseInt(String(x)) <= lottery.totalNumbers).includes(num));
+                            })
+                            .slice(0, lottery.extrasGameSize || 2)
+                            .map((num, idx) => {
+                              const displayNum = parseInt(String(num)) > 100 ? parseInt(String(num)) - 100 : num;
+                              return (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full text-white bg-emerald-500"
+                                >
+                                  {displayNum}
+                                </span>
+                              );
+                            })}
+                          {/* Fallback se trevos não estiverem no formato esperado */}
+                          {latestResult.numbers.filter(num => parseInt(String(num)) > (lottery.extrasOffset || 100)).length === 0 && 
+                           latestResult.numbers.length > lottery.drawSize && (
+                            latestResult.numbers.slice(lottery.drawSize).map((num, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full text-white bg-emerald-500"
+                              >
+                                {num}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
