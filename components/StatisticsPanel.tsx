@@ -98,87 +98,110 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
       return '';
   };
 
-  // Delay Heatmap Logic
-  const delayStats = analysis.delayStats;
-  const renderDelayHeatmap = () => {
-    if (!delayStats || delayStats.length === 0) return null;
+  // Delay 3D Logic
+  const [delay3DData, setDelay3DData] = React.useState<{x: number[], y: number[], z: number[][]} | null>(null);
+  const [loading3D, setLoading3D] = React.useState(false);
 
-    // Detect max delay to show (clamp at 50 to avoid massive tables, or dynamic?)
-    // Let's find the max delay that has significant data.
-    // Or just use a fixed range like 0-30.
-    // For Mega Sena, delay can be 60.
-    // Let's simply take the max delay from stats but limit to say 60 for display sanity.
-    // If we want to show ALL, we need horizontal scroll.
-    const MAX_DISPLAY_DELAY = 60; 
-    
-    // Calculate global max frequency for heatmap normalization
-    let maxFreq = 0;
-    delayStats.forEach(ds => {
-        if (ds.delayDistribution) {
-            (Object.values(ds.delayDistribution) as number[]).forEach(f => {
-                if (f > maxFreq) maxFreq = f;
-            });
+  React.useEffect(() => {
+    const fetch3DData = async () => {
+        setLoading3D(true);
+        try {
+            // Check if API is available (we might be in offline/demo mode)
+            // But we can only support 3D map with backend.
+            // If offline, maybe skip?
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+            const res = await fetch(`${apiUrl}/api/stats/delay-3d/${lottery.id}?limit=200`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.z && data.z.length > 0) {
+                    setDelay3DData(data);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to fetch 3D data", e);
+        } finally {
+            setLoading3D(false);
         }
-    });
-
-    const getDelayColor = (freq: number) => {
-        if (!freq) return 'transparent';
-        const opacity = 0.2 + (freq / maxFreq) * 0.8;
-        return `rgba(220, 38, 38, ${opacity})`; // Red-ish for delays
     };
+    
+    fetch3DData();
+  }, [lottery.id]);
 
-    // Sorted by Number natural order (1..N)
-    const sortedDelayStats = [...delayStats].sort((a, b) => a.number - b.number);
+  // Dynamic import for Plotly to avoid SSR issues or heavy bundle load if not needed immediately
+  // But standard import is fine for client-side React.
+  // Using a simple lazy load or just conditional render.
+  
+  // We need to lazy load Plot component because it depends on window/document
+  const Plot = React.useMemo(() => React.lazy(() => import('react-plotly.js')), []);
 
+  const renderDelayHeatmap = () => {
+    // Replaced with 3D Chart
     return (
         <div className="p-4 md:p-6 border-b border-gray-100">
              <div className="flex items-center justify-between mb-4">
                 <h3 className="flex items-center gap-2 text-sm font-bold text-gray-500 uppercase tracking-wider">
                     <Clock className="w-4 h-4 text-red-500" />
-                    Mapa de Frequência de Atrasos
+                    Mapa de Atrasos 3D (Evolução Temporal)
                 </h3>
-                <span className="text-[10px] text-gray-400 md:hidden flex items-center gap-1">
-                    <ArrowRightLeft className="w-3 h-3" />
-                    Deslize
-                </span>
             </div>
             
-            <div className="overflow-x-auto pb-2 scrollbar-hide">
-                <div className="min-w-[800px] text-[10px]">
-                    {/* Header Row */}
-                    <div className="flex mb-1">
-                        <div className="w-8 shrink-0 font-bold text-gray-400 text-center">Nº</div>
-                        {Array.from({ length: MAX_DISPLAY_DELAY + 1 }).map((_, i) => (
-                            <div key={i} className="w-6 shrink-0 text-center text-gray-300 font-medium">
-                                {i}
-                            </div>
-                        ))}
+            <div className="w-full h-[500px] border border-gray-100 rounded-lg overflow-hidden bg-white relative">
+                {loading3D && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50/80 z-10">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
                     </div>
+                )}
+                
+                {!loading3D && !delay3DData && (
+                     <div className="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                        Dados 3D indisponíveis para esta loteria/modo offline.
+                     </div>
+                )}
 
-                    {/* Data Rows */}
-                    {sortedDelayStats.map((stat) => (
-                         <div key={stat.number} className="flex items-center hover:bg-gray-50 transition-colors h-6">
-                            <div className="w-8 shrink-0 font-bold text-gray-700 text-center border-r border-gray-100">
-                                {stat.number}
-                            </div>
-                            {Array.from({ length: MAX_DISPLAY_DELAY + 1 }).map((_, delayVal) => {
-                                const freq = stat.delayDistribution?.[delayVal] || 0;
-                                return (
-                                    <div 
-                                        key={delayVal} 
-                                        className="w-6 h-5 flex items-center justify-center relative group shrink-0"
-                                        style={{ backgroundColor: getDelayColor(freq) }}
-                                    >
-                                        {freq > 0 && <span className="opacity-0 group-hover:opacity-100 text-[8px] absolute -top-4 bg-black text-white px-1 rounded z-10">{freq}x</span>}
-                                    </div>
-                                );
-                            })}
-                         </div>
-                    ))}
-                </div>
+                {!loading3D && delay3DData && (
+                    <React.Suspense fallback={<div className="p-4">Carregando Gráfico 3D...</div>}>
+                        <Plot
+                            data={[
+                                {
+                                    z: delay3DData.z,
+                                    x: delay3DData.x,
+                                    y: delay3DData.y,
+                                    type: 'surface',
+                                    colorscale: 'Viridis',
+                                    showscale: false, // Hide colorbar to save space? Or true?
+                                    contours: {
+                                        z: {
+                                            show: true,
+                                            usecolormap: true,
+                                            highlightcolor: "#42f562",
+                                            project: { z: true }
+                                        }
+                                    }
+                                }
+                            ]}
+                            layout={{
+                                autosize: true,
+                                margin: { l: 0, r: 0, b: 0, t: 0 },
+                                scene: {
+                                    xaxis: { title: 'Número', tickfont: { size: 10 } },
+                                    yaxis: { title: 'Concurso', tickfont: { size: 10 } },
+                                    zaxis: { title: 'Atraso', tickfont: { size: 10 } },
+                                    camera: {
+                                        eye: { x: 1.5, y: 1.5, z: 1.5 }
+                                    }
+                                },
+                                // paper_bgcolor: 'rgba(0,0,0,0)',
+                                // plot_bgcolor: 'rgba(0,0,0,0)',
+                            }}
+                            useResizeHandler={true}
+                            style={{ width: "100%", height: "100%" }}
+                            config={{ displayModeBar: false }}
+                        />
+                    </React.Suspense>
+                )}
             </div>
              <p className="text-[10px] text-gray-400 mt-2 italic">
-                *O gráfico mostra quantas vezes cada número ficou atrasado por X concursos. Intensidade da cor indica frequência.
+                *Visualização 3D interativa: Rotacione para ver a evolução dos atrasos ao longo dos últimos concursos.
             </p>
         </div>
     );
