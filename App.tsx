@@ -301,10 +301,12 @@ function App() {
   const handleDownloadHistory = async () => {
     setIsLoading(true);
     setError(null);
+    setOperationStep('');
     setLoadingMessage(`Buscando resultados da ${lottery.name}...`);
 
     try {
       // Try to fetch via a CORS proxy or direct request
+      setOperationStep('Conectando ao servidor de resultados...');
       const formData = new URLSearchParams();
       formData.append('l', lottery.downloadParam);
       formData.append('t', 't');
@@ -322,23 +324,28 @@ function App() {
         throw new Error('Falha ao buscar resultados');
       }
 
+      setOperationStep('Baixando arquivo de resultados...');
       const blob = await response.blob();
-      const file = new File([blob], `${lottery.name}.xlsx`, { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const file = new File([blob], `${lottery.name}.xlsx`, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
       setLoadingMessage(`Analisando histórico da ${lottery.name}...`);
-      
+      setOperationStep('Processando arquivo...');
+
       const data = await parseHistoryFile(file, lottery);
       if (data.length === 0) {
         throw new Error(`Nenhum jogo válido encontrado.`);
       }
+
+      setOperationStep('Analisando padrões históricos...');
       setHistory(data);
-      
+
       // Map to plain numbers for analysis
       const stats = analyzeHistoryExtended(data.map(h => h.numbers), lottery);
       setAnalysis(stats);
       setError(null);
+      setOperationStep('');
 
     } catch (err: any) {
       console.error('Auto-fetch failed:', err);
@@ -352,6 +359,7 @@ function App() {
       } else {
         setError('Erro: ' + (err.message || 'Falha ao carregar resultados'));
       }
+      setOperationStep('');
     } finally {
       setIsLoading(false);
     }
@@ -363,13 +371,17 @@ function App() {
 
     setIsLoading(true);
     setError(null);
+    setOperationStep('');
     setLoadingMessage(`Analisando histórico da ${lottery.name}...`);
 
     try {
+      setOperationStep('Lendo arquivo...');
       const data = await parseHistoryFile(file, lottery);
       if (data.length === 0) {
         throw new Error(`Nenhum jogo válido de ${lottery.gameSize} números encontrado.`);
       }
+
+      setOperationStep('Analisando padrões históricos...');
       setHistory(data);
       
       // Map for analysis
@@ -969,40 +981,72 @@ function App() {
         </div>
 
         {/* Results Section */}
-        {generatedGames.length > 0 && (
+        {(generatedGames.length > 0 || showResultsSkeleton) && (
           <div className="animate-slide-up">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <Dna className="w-6 h-6" style={{ color: lottery.color }} />
                 Jogos Gerados
-                <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                  {generatedGames.length}
-                </span>
+                {!showResultsSkeleton && (
+                  <span className="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                    {generatedGames.length}
+                  </span>
+                )}
+                {showResultsSkeleton && (
+                  <span className="text-sm font-normal text-gray-400 bg-gray-100 px-2 py-1 rounded-full animate-pulse">
+                    Gerando...
+                  </span>
+                )}
               </h2>
-              <div className="flex gap-2">
-                <button 
-                  onClick={copyToClipboard}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm"
-                >
-                  <Copy className="w-4 h-4" />
-                  Copiar
-                </button>
-                <button 
-                  onClick={handleDownload}
-                  className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity font-medium text-sm shadow-sm hover:opacity-90"
-                  style={{ backgroundColor: lottery.color }}
-                >
-                  <Download className="w-4 h-4" />
-                  Excel
-                </button>
-              </div>
+              {!showResultsSkeleton && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={copyToClipboard}
+                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copiar
+                  </button>
+                  <button
+                    onClick={handleDownload}
+                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity font-medium text-sm shadow-sm hover:opacity-90"
+                    style={{ backgroundColor: lottery.color }}
+                  >
+                    <Download className="w-4 h-4" />
+                    Excel
+                  </button>
+                </div>
+              )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {generatedGames.map((game, idx) => (
-                <GameTicket key={idx} game={game} index={idx} lottery={lottery} />
-              ))}
-            </div>
+            {/* Skeleton Loader */}
+            {showResultsSkeleton && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, idx) => (
+                  <div key={idx} className="bg-white rounded-xl border border-gray-200 p-4 animate-pulse">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="h-5 bg-gray-200 rounded w-20"></div>
+                      <div className="h-6 bg-gray-200 rounded-full w-8"></div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {[...Array(15)].map((_, i) => (
+                        <div key={i} className="h-8 w-8 bg-gray-200 rounded-full"></div>
+                      ))}
+                    </div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Actual Results */}
+            {!showResultsSkeleton && generatedGames.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {generatedGames.map((game, idx) => (
+                  <GameTicket key={idx} game={game} index={idx} lottery={lottery} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>
