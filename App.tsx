@@ -37,6 +37,8 @@ function App() {
   // Covering Design state
   const [coveringConfig, setCoveringConfig] = useState<CoveringDesignConfig>(DEFAULT_COVERING_CONFIG);
   const [coveringResult, setCoveringResult] = useState<CoveringDesignResult | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const downloadFormRef = useRef<HTMLFormElement>(null);
@@ -140,37 +142,51 @@ function App() {
 
       if (!loadedFromCache) {
         // Fetch full history for analysis if not in cache
-        setIsLoading(true);
-        setLoadingMessage(`Carregando histórico da ${lottery.name}...`);
-        
-        fetch(`${apiUrl}/api/lottery/${currentLotteryId}/history`)
-          .then(res => res.ok ? res.json() : null)
-          .then(data => {
-            if (data && data.games && data.games.length > 0) {
-              // API currently returns { games: Game[] } i.e. number[][]
-              // We must map to HistoryEntry[]
-              const entries: HistoryEntry[] = data.games.map((g: Game) => ({ numbers: g }));
-              setHistory(entries);
-              
-              // Run analysis
-              const stats = analyzeHistoryExtended(entries.map(h => h.numbers), lottery);
-              setAnalysis(stats);
-              
-              // Cache data (Store just the games array numbers to keep cache simple? 
-              // OR store the entries? Let's store entries if we can. 
-              // CURRENTLY API returns simple games, so storing simple games is safer for now if we want consistency.
-              // BUT we want to support Rich Data. If user uploads file, we possess Rich Data.
-              // Let's store what we have.
-              localStorage.setItem(cacheKey, JSON.stringify(entries));
-              localStorage.setItem(cachedDateKey, new Date().toISOString());
-            }
-          })
-          .catch(() => {
-            setError('Falha ao carregar histórico. Tente o upload manual.');
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+        const fetchHistory = () => {
+          setIsLoading(true);
+          // Don't overwrite message if already syncing
+          if (!isSyncing) setLoadingMessage(`Carregando histórico da ${lottery.name}...`);
+          
+          fetch(`${apiUrl}/api/lottery/${currentLotteryId}/history`)
+            .then(res => res.ok ? res.json() : null)
+            .then(data => {
+              if (data) {
+                if (data.syncing) {
+                   setIsSyncing(true);
+                   setLoadingMessage(`Sincronizando com a Caixa...`);
+                   // If syncing, scheduling a retry in 5 seconds
+                   setTimeout(fetchHistory, 5000);
+                } else {
+                   setIsSyncing(false);
+                }
+
+                if (data.games && data.games.length > 0) {
+                  // API currently returns { games: Game[] } i.e. number[][]
+                  // We must map to HistoryEntry[]
+                  const entries: HistoryEntry[] = data.games.map((g: Game) => ({ numbers: g }));
+                  
+                  // Only update if we have MORE data or differ significantly
+                  if (entries.length > history.length) {
+                      setHistory(entries);
+                      // Run analysis
+                      const stats = analyzeHistoryExtended(entries.map(h => h.numbers), lottery);
+                      setAnalysis(stats);
+                      
+                      localStorage.setItem(cacheKey, JSON.stringify(entries));
+                      localStorage.setItem(cachedDateKey, new Date().toISOString());
+                  }
+                }
+              }
+            })
+            .catch(() => {
+              if (!isSyncing) setError('Falha ao carregar histórico. Tente o upload manual.');
+            })
+            .finally(() => {
+              setIsLoading(false);
+            });
+        };
+
+        fetchHistory();
       }
     }
   }, [currentLotteryId, lottery.gameSize, apiUrl, lottery]);
