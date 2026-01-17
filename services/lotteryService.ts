@@ -2,7 +2,7 @@ import { read, utils } from 'xlsx';
 import { 
   Game, FilterConfig, HistoryAnalysis, NumberStat, BalanceStat, RepetitionStats, LotteryDefinition,
   DelayStats, SumRangeStats, ConsecutiveStats, TrendStats, RepeatBetweenDrawsStats, QuadrantStats,
-  ExtendedHistoryAnalysis, ExtendedFilterConfig, CycleStats
+  ExtendedHistoryAnalysis, ExtendedFilterConfig, CycleStats, HistoryEntry, PrizeInfo
 } from '../types';
 
 // Cache for Primes to avoid recalculating
@@ -66,6 +66,18 @@ const parseDate = (val: any): string | undefined => {
   }
   return undefined;
 };
+
+const parseCell = (cell: any): number | null => {
+  if (typeof cell === 'number') return Math.round(cell);
+  if (typeof cell === 'string') {
+      // Enhanced safety: Reject strings that look like dates (common in lottery CSVs)
+      if (cell.includes('/') || cell.includes(':') || (cell.includes('-') && cell.length > 4)) return null;
+      
+      const parsed = parseInt(cell.trim());
+      return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
 
 export const parseHistoryFile = async (file: File, lottery: LotteryDefinition): Promise<HistoryEntry[]> => {
   return new Promise((resolve, reject) => {

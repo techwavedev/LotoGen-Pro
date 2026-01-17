@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload } from 'lucide-react';
-import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS, CoveringDesignConfig, DEFAULT_COVERING_CONFIG, CoveringDesignResult } from './types';
+import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS, CoveringDesignConfig, DEFAULT_COVERING_CONFIG, CoveringDesignResult, HistoryEntry } from './types';
 import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended, generateCombinatorialGames } from './services/lotteryService';
 import { generateCoveringDesign } from './services/coveringDesigns';
 import * as analytics from './utils/analytics';
@@ -19,7 +19,8 @@ function App() {
   const [currentLotteryId, setCurrentLotteryId] = useState<LotteryId>('lotofacil');
   const lottery = LOTTERIES[currentLotteryId];
 
-  const [history, setHistory] = useState<Game[]>([]);
+  // History State now holds Rich Entries (with metadata)
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [analysis, setAnalysis] = useState<ExtendedHistoryAnalysis | null>(null);
   const [generatedGames, setGeneratedGames] = useState<Game[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -102,10 +103,17 @@ function App() {
     if (cachedData && cachedDate && isHistoryCacheValid(cachedDate)) {
       // Use cached data
       try {
-        const games = JSON.parse(cachedData);
-        if (Array.isArray(games) && games.length > 0) {
-            setHistory(games);
-            const stats = analyzeHistoryExtended(games, lottery);
+        const rawGames = JSON.parse(cachedData);
+        if (Array.isArray(rawGames) && rawGames.length > 0) {
+            // Check if it's already HistoryEntry[] or just Game[] (legacy cache)
+            // Heuristic: check if element has 'numbers' prop
+            const isRich = rawGames[0].numbers && Array.isArray(rawGames[0].numbers);
+            const historyEntries: HistoryEntry[] = isRich 
+                ? rawGames 
+                : rawGames.map((g: any) => ({ numbers: g }));
+
+            setHistory(historyEntries);
+            const stats = analyzeHistoryExtended(historyEntries.map(h => h.numbers), lottery);
             setAnalysis(stats);
             loadedFromCache = true;
         }
@@ -139,12 +147,21 @@ function App() {
           .then(res => res.ok ? res.json() : null)
           .then(data => {
             if (data && data.games && data.games.length > 0) {
-              setHistory(data.games);
+              // API currently returns { games: Game[] } i.e. number[][]
+              // We must map to HistoryEntry[]
+              const entries: HistoryEntry[] = data.games.map((g: Game) => ({ numbers: g }));
+              setHistory(entries);
+              
               // Run analysis
-              const stats = analyzeHistoryExtended(data.games, lottery);
+              const stats = analyzeHistoryExtended(entries.map(h => h.numbers), lottery);
               setAnalysis(stats);
-              // Cache the data
-              localStorage.setItem(cacheKey, JSON.stringify(data.games));
+              
+              // Cache data (Store just the games array numbers to keep cache simple? 
+              // OR store the entries? Let's store entries if we can. 
+              // CURRENTLY API returns simple games, so storing simple games is safer for now if we want consistency.
+              // BUT we want to support Rich Data. If user uploads file, we possess Rich Data.
+              // Let's store what we have.
+              localStorage.setItem(cacheKey, JSON.stringify(entries));
               localStorage.setItem(cachedDateKey, new Date().toISOString());
             }
           })
@@ -284,7 +301,8 @@ function App() {
       }
       setHistory(data);
       
-      const stats = analyzeHistoryExtended(data, lottery);
+      // Map to plain numbers for analysis
+      const stats = analyzeHistoryExtended(data.map(h => h.numbers), lottery);
       setAnalysis(stats);
       setError(null);
 
@@ -320,7 +338,8 @@ function App() {
       }
       setHistory(data);
       
-      const stats = analyzeHistoryExtended(data, lottery);
+      // Map for analysis
+      const stats = analyzeHistoryExtended(data.map(h => h.numbers), lottery);
       setAnalysis(stats);
 
     } catch (err: any) {
@@ -407,8 +426,11 @@ function App() {
             const effectiveConfig = betType === 'surpresinha' ? DEFAULT_EXTENDED_CONFIG : config;
             const effectiveSize = betType === 'multiple' ? selectedGameSize : lottery.gameSize;
             
+            // Pass ONLY the game arrays to generateGamesExtended
+            const gamesHistory = history.map(h => h.numbers);
+
             const games = await generateGamesExtended(
-                targetCount, history, effectiveConfig, lottery, hotNumbers, analysis || undefined, effectiveSize
+                targetCount, gamesHistory, effectiveConfig, lottery, hotNumbers, analysis || undefined, effectiveSize
             );
             
             setGeneratedGames(games);
