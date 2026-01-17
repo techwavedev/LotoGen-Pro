@@ -43,6 +43,7 @@ function App() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const downloadFormRef = useRef<HTMLFormElement>(null);
+  const historyLengthRef = useRef<number>(0); // Track history length to avoid stale closures
   const apiUrl = import.meta.env.VITE_API_URL;
 
   // Fetch winners count on mount and track session
@@ -81,6 +82,9 @@ function App() {
 
   // Reset state and fetch latest result + full history when lottery changes
   useEffect(() => {
+    // Reset ref on lottery change
+    historyLengthRef.current = 0;
+    
     setHistory([]);
     setAnalysis(null);
     setGeneratedGames([]);
@@ -88,7 +92,8 @@ function App() {
     setLatestResult(null);
     
     // Adjust hot number defaults based on lottery size
-    const idealHot = Math.floor(lottery.gameSize * 0.6); // Rule of thumb
+    const currentLottery = LOTTERIES[currentLotteryId];
+    const idealHot = Math.floor(currentLottery.gameSize * 0.6); // Rule of thumb
     setConfig(prev => ({
         ...prev,
         minHotNumbers: Math.max(0, idealHot - 2),
@@ -115,8 +120,9 @@ function App() {
                 ? rawGames 
                 : rawGames.map((g: any) => ({ numbers: g }));
 
+            historyLengthRef.current = historyEntries.length;
             setHistory(historyEntries);
-            const stats = analyzeHistoryExtended(historyEntries.map(h => h.numbers), lottery);
+            const stats = analyzeHistoryExtended(historyEntries.map(h => h.numbers), currentLottery);
             setAnalysis(stats);
             loadedFromCache = true;
         }
@@ -146,7 +152,7 @@ function App() {
         const fetchHistory = () => {
           setIsLoading(true);
           // Don't overwrite message if already syncing
-          if (!isSyncing) setLoadingMessage(`Carregando histórico da ${lottery.name}...`);
+          setLoadingMessage(`Carregando histórico da ${currentLottery.name}...`);
           
           fetch(`${apiUrl}/api/lottery/${currentLotteryId}/history`)
             .then(res => res.ok ? res.json() : null)
@@ -166,11 +172,12 @@ function App() {
                   // We must map to HistoryEntry[]
                   const entries: HistoryEntry[] = data.games.map((g: Game) => ({ numbers: g }));
                   
-                  // Only update if we have MORE data or differ significantly
-                  if (entries.length > history.length) {
+                  // Only update if we have MORE data (use ref to avoid stale closure)
+                  if (entries.length > historyLengthRef.current) {
+                      historyLengthRef.current = entries.length;
                       setHistory(entries);
                       // Run analysis
-                      const stats = analyzeHistoryExtended(entries.map(h => h.numbers), lottery);
+                      const stats = analyzeHistoryExtended(entries.map(h => h.numbers), currentLottery);
                       setAnalysis(stats);
                       
                       localStorage.setItem(cacheKey, JSON.stringify(entries));
@@ -180,7 +187,7 @@ function App() {
               }
             })
             .catch(() => {
-              if (!isSyncing) setError('Falha ao carregar histórico. Tente o upload manual.');
+              setError('Falha ao carregar histórico. Tente o upload manual.');
             })
             .finally(() => {
               setIsLoading(false);
@@ -190,7 +197,8 @@ function App() {
         fetchHistory();
       }
     }
-  }, [currentLotteryId, lottery.gameSize, apiUrl, lottery]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLotteryId, apiUrl]);
 
   const handleLotteryChange = (id: LotteryId) => {
     setCurrentLotteryId(id);
@@ -204,12 +212,14 @@ function App() {
 
   // Sync game size when lottery changes
   useEffect(() => {
-    setSelectedGameSize(lottery.gameSize);
+    const currentLottery = LOTTERIES[currentLotteryId];
+    setSelectedGameSize(currentLottery.gameSize);
     // Auto-enable exclusion mode for Lotomania (gameSize >= 50)
     setExclusionMode(false); // Always reset to standard inclusion mode on lottery change
     setCombinatorialSelection([]); // Clear selection when lottery changes
     setTrevosSelection([]); // Clear trevos selection
-  }, [lottery]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentLotteryId]);
 
   // Auto-configure "Best Static Defaults" when lottery changes
   useEffect(() => {
