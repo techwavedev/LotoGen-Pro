@@ -406,8 +406,8 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
           let delayCount = 0;
           let prevIndex = -1;
           
-          for (let i = 0; i < history.length; i++) {
-              const gameExtras = history[i].filter(n => n > extrasOffset).map(n => n - extrasOffset);
+          for (let i = 0; i < filteredHistory.length; i++) {
+              const gameExtras = filteredHistory[i].filter(n => n > extrasOffset).map(n => n - extrasOffset);
               if (gameExtras.includes(num)) {
                   if (lastSeen === -1 || i > lastSeen) lastSeen = i;
                   if (prevIndex !== -1) {
@@ -433,7 +433,7 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
       
       // Análise de Pares de Trevos mais frequentes
       const pairCounts: Record<string, number> = {};
-      history.forEach(game => {
+      filteredHistory.forEach(game => {
           const gameExtras = game.filter(n => n > extrasOffset).map(n => n - extrasOffset).sort((a,b) => a-b);
           if (gameExtras.length >= 2) {
               const pairKey = `${gameExtras[0]}-${gameExtras[1]}`;
@@ -456,9 +456,9 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
       const repeatDistribution: Record<number, number> = {};
       let totalRepeats = 0;
       
-      for (let i = 1; i < history.length; i++) {
-          const prevExtras = new Set(history[i - 1].filter(n => n > extrasOffset).map(n => n - extrasOffset));
-          const currExtras = history[i].filter(n => n > extrasOffset).map(n => n - extrasOffset);
+      for (let i = 1; i < filteredHistory.length; i++) {
+          const prevExtras = new Set(filteredHistory[i - 1].filter(n => n > extrasOffset).map(n => n - extrasOffset));
+          const currExtras = filteredHistory[i].filter(n => n > extrasOffset).map(n => n - extrasOffset);
           const repeats = currExtras.filter(n => prevExtras.has(n)).length;
           repeatDistribution[repeats] = (repeatDistribution[repeats] || 0) + 1;
           totalRepeats += repeats;
@@ -466,9 +466,9 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
       
       // Tendências dos Trevos (últimos 20 sorteios vs anteriores)
       let trendStats;
-      if (history.length >= 40) {
-          const recentHistory = history.slice(-20);
-          const olderHistory = history.slice(-40, -20);
+      if (filteredHistory.length >= 40) {
+          const recentHistory = filteredHistory.slice(-20);
+          const olderHistory = filteredHistory.slice(-40, -20);
           
           const recentCounts = new Array(extrasLimit + 1).fill(0);
           const olderCounts = new Array(extrasLimit + 1).fill(0);
@@ -506,7 +506,7 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
           delayStats: extrasDelayStats.sort((a, b) => b.delay - a.delay),
           pairFrequency,
           repeatBetweenDraws: {
-              avgRepeats: history.length > 1 ? Math.round(totalRepeats / (history.length - 1) * 10) / 10 : 0,
+              avgRepeats: filteredHistory.length > 1 ? Math.round(totalRepeats / (filteredHistory.length - 1) * 10) / 10 : 0,
               distribution: repeatDistribution
           },
           trendStats
@@ -521,7 +521,7 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
   // Analyze Balance (How many hot numbers appear per game)
   const balanceCounts: Record<number, number> = {};
   
-  history.forEach(game => {
+  filteredHistory.forEach(game => {
     let hotCount = 0;
     // Only count MAIN numbers for hot/cold balance
     game.forEach(num => {
@@ -549,7 +549,7 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
   let nearMiss2 = 0; 
 
   // Updated limit to cover standard history sizes (Quina is ~6500, Mega ~2700) without sampling errors
-  const limitAnalysis = history.length > 10000 ? 10000 : history.length;
+  const limitAnalysis = filteredHistory.length > 10000 ? 10000 : filteredHistory.length;
   
   for (let i = 0; i < limitAnalysis; i++) {
     for (let j = i + 1; j < limitAnalysis; j++) {
@@ -562,8 +562,8 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
       // +Milionaria: 6 main + 2 trevos.
       // Let's filter MAIN numbers for this standard repetition metric to correspond to "drawSize"
       
-      const g1 = history[i].filter(n => n <= lottery.totalNumbers);
-      const g2 = history[j].filter(n => n <= lottery.totalNumbers);
+      const g1 = filteredHistory[i].filter(n => n <= lottery.totalNumbers);
+      const g2 = filteredHistory[j].filter(n => n <= lottery.totalNumbers);
       
       // Reset logic for filtered arrays
       while (p1 < g1.length && p2 < g2.length) {
@@ -578,8 +578,8 @@ export const analyzeHistory = (history: Game[], lottery: LotteryDefinition): His
     }
   }
 
-  if (limitAnalysis < history.length) {
-    const ratio = (history.length * (history.length-1)) / (limitAnalysis * (limitAnalysis-1));
+  if (limitAnalysis < filteredHistory.length) {
+    const ratio = (filteredHistory.length * (filteredHistory.length-1)) / (limitAnalysis * (limitAnalysis-1));
     duplicates = Math.round(duplicates * ratio);
     nearMiss1 = Math.round(nearMiss1 * ratio);
     nearMiss2 = Math.round(nearMiss2 * ratio);
