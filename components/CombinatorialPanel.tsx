@@ -1,7 +1,11 @@
-import React from 'react';
-import { LotteryDefinition, ExtendedHistoryAnalysis } from '../types';
+import React, { useState, useMemo } from 'react';
+import { 
+  LotteryDefinition, ExtendedHistoryAnalysis, 
+  WheelType, GuaranteeLevel, CoveringDesignConfig, 
+  DEFAULT_COVERING_CONFIG, GUARANTEE_DESCRIPTIONS 
+} from '../types';
 import clsx from 'clsx';
-import { Grid, MousePointerClick, Info, Flame, Snowflake, Ban, Check } from 'lucide-react';
+import { Grid, Info, Ban, Check, Zap, Scale, Target, ChevronDown, TrendingDown, Sparkles } from 'lucide-react';
 
 interface CombinatorialPanelProps {
   lottery: LotteryDefinition;
@@ -10,11 +14,25 @@ interface CombinatorialPanelProps {
   analysis?: ExtendedHistoryAnalysis | null;
   exclusionMode: boolean;
   setExclusionMode: (mode: boolean) => void;
+  // New: Covering Design Config
+  coveringConfig: CoveringDesignConfig;
+  setCoveringConfig: (config: CoveringDesignConfig) => void;
+  // Optional: Show abbreviated results stats
+  abbreviatedStats?: {
+    fullWheelCount: number;
+    abbreviatedCount: number;
+    savingsPercent: number;
+    coverageScore: number;
+  } | null;
 }
 
 const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ 
-    lottery, selection, setSelection, analysis, exclusionMode, setExclusionMode 
+    lottery, selection, setSelection, analysis, exclusionMode, setExclusionMode,
+    coveringConfig, setCoveringConfig, abbreviatedStats
 }) => {
+  // Dropdown open state
+  const [showGuaranteeDropdown, setShowGuaranteeDropdown] = useState(false);
+  
   // For Lotomania: use exclusion mode (select numbers to EXCLUDE)
   const isLotomania = lottery.gameSize >= 50;
   
@@ -57,6 +75,22 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
   // Calculate combinations based on active pool
   const totalCombinations = combinationsCount(activePool.length, lottery.gameSize);
   const totalCost = totalCombinations * (lottery.basePrice || 0);
+  
+  // Calculate estimated games for abbreviated mode
+  const estimatedAbbreviatedGames = useMemo(() => {
+    if (coveringConfig.wheelType === 'full') return totalCombinations;
+    if (abbreviatedStats) return abbreviatedStats.abbreviatedCount;
+    // Rough estimate: 20-40% of full wheel depending on guarantee
+    const ratio = coveringConfig.guaranteeLevel === '3-if-5' ? 0.15 :
+                  coveringConfig.guaranteeLevel === '4-if-5' ? 0.25 :
+                  coveringConfig.guaranteeLevel === '5-if-6' ? 0.30 :
+                  0.20;
+    return Math.max(1, Math.ceil(totalCombinations * ratio));
+  }, [coveringConfig, totalCombinations, abbreviatedStats]);
+  
+  const estimatedCost = estimatedAbbreviatedGames * (lottery.basePrice || 0);
+  const savingsPercent = abbreviatedStats?.savingsPercent ?? 
+    (coveringConfig.wheelType !== 'full' ? Math.round((1 - estimatedAbbreviatedGames / Math.max(totalCombinations, 1)) * 100) : 0);
   
   // Calculate grid columns
   const cols = Math.min(lottery.cols, 10); // Max 10 cols for better mobile view
@@ -123,7 +157,6 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
               // Factor 5: Mathematical properties (0.1 weight)
               const isPrime = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97].includes(num);
               const isFibonacci = [1,2,3,5,8,13,21,34,55,89].includes(num);
-              const isEdge = num % lottery.cols === 1 || num % lottery.cols === 0;
               
               // Slight bonuses for variety (primes and fibonacci are often recommended)
               if (isPrime) score += 0.02;
@@ -159,6 +192,21 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
       return '⚠️ Baixo';
   };
 
+  // Wheel type options
+  const wheelTypes: { type: WheelType; icon: React.ReactNode; label: string; desc: string }[] = [
+    { type: 'full', icon: <Grid className="w-4 h-4" />, label: 'Total', desc: 'Todas combinações' },
+    { type: 'abbreviated', icon: <Target className="w-4 h-4" />, label: 'Otimizado', desc: 'Menos jogos, garantia' },
+    { type: 'balanced', icon: <Scale className="w-4 h-4" />, label: 'Balanceado', desc: 'Cobertura uniforme' },
+  ];
+
+  // Available guarantee levels based on game size
+  const availableGuarantees: GuaranteeLevel[] = useMemo(() => {
+    if (lottery.gameSize <= 6) {
+      return ['3-if-4', '4-if-5', '3-if-5', '5-if-6', '4-if-6', '3-if-6'];
+    }
+    return ['3-if-5', '4-if-5', '3-if-4'];
+  }, [lottery.gameSize]);
+
   return (
     <div className="space-y-6 animate-fade-in">
         <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
@@ -172,7 +220,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                        <p className="text-sm text-gray-500">
                           {exclusionMode 
                             ? 'Selecione números para EXCLUIR. Os restantes formarão o pool.' 
-                            : 'Selecione números para gerar todas as combinações possíveis.'}
+                            : 'Selecione números para gerar combinações otimizadas.'}
                        </p>
                    </div>
                </div>
@@ -191,6 +239,88 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                       {exclusionMode ? <Ban className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                       {exclusionMode ? 'Modo: Excluir' : 'Modo: Incluir'}
                    </button>
+               )}
+           </div>
+
+           {/* ========== NEW: WHEEL TYPE SELECTOR ========== */}
+           <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+               <div className="flex items-center gap-2 mb-3">
+                   <Sparkles className="w-4 h-4 text-indigo-600" />
+                   <span className="text-sm font-semibold text-indigo-800">Tipo de Fechamento</span>
+                   <span className="text-xs text-indigo-500">(Algoritmo Matemático)</span>
+               </div>
+               
+               {/* Wheel Type Buttons */}
+               <div className="flex flex-wrap gap-2 mb-3">
+                   {wheelTypes.map(({ type, icon, label, desc }) => (
+                       <button
+                           key={type}
+                           onClick={() => setCoveringConfig({ ...coveringConfig, wheelType: type })}
+                           className={clsx(
+                               "flex-1 min-w-[100px] flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all",
+                               coveringConfig.wheelType === type
+                                 ? "bg-indigo-600 text-white border-indigo-600 shadow-lg"
+                                 : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50"
+                           )}
+                       >
+                           {icon}
+                           <span className="text-sm font-semibold">{label}</span>
+                           <span className={clsx("text-xs", coveringConfig.wheelType === type ? "text-indigo-200" : "text-gray-400")}>{desc}</span>
+                       </button>
+                   ))}
+               </div>
+               
+               {/* Guarantee Selector (only for abbreviated) */}
+               {coveringConfig.wheelType === 'abbreviated' && (
+                   <div className="mt-3 pt-3 border-t border-indigo-100">
+                       <div className="flex items-center justify-between mb-2">
+                           <span className="text-sm font-medium text-indigo-800">Nível de Garantia:</span>
+                           <div className="relative">
+                               <button
+                                   onClick={() => setShowGuaranteeDropdown(!showGuaranteeDropdown)}
+                                   className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-indigo-200 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+                               >
+                                   <Target className="w-4 h-4" />
+                                   {coveringConfig.guaranteeLevel}
+                                   <ChevronDown className={clsx("w-4 h-4 transition-transform", showGuaranteeDropdown && "rotate-180")} />
+                               </button>
+                               
+                               {showGuaranteeDropdown && (
+                                   <div className="absolute top-full right-0 mt-1 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                                       {availableGuarantees.map(level => (
+                                           <button
+                                               key={level}
+                                               onClick={() => {
+                                                   setCoveringConfig({ ...coveringConfig, guaranteeLevel: level });
+                                                   setShowGuaranteeDropdown(false);
+                                               }}
+                                               className={clsx(
+                                                   "w-full text-left px-4 py-3 text-sm border-b border-gray-50 hover:bg-indigo-50 transition-colors",
+                                                   coveringConfig.guaranteeLevel === level && "bg-indigo-100 text-indigo-800"
+                                               )}
+                                           >
+                                               <div className="font-semibold">{level}</div>
+                                               <div className="text-xs text-gray-500">{GUARANTEE_DESCRIPTIONS[level]}</div>
+                                           </button>
+                                       ))}
+                                   </div>
+                               )}
+                           </div>
+                       </div>
+                       <p className="text-xs text-indigo-600 bg-indigo-100 p-2 rounded">
+                           💡 {GUARANTEE_DESCRIPTIONS[coveringConfig.guaranteeLevel]}
+                       </p>
+                   </div>
+               )}
+               
+               {/* Savings Preview */}
+               {coveringConfig.wheelType !== 'full' && totalCombinations > 0 && (
+                   <div className="mt-3 flex items-center gap-2 text-sm">
+                       <TrendingDown className="w-4 h-4 text-green-600" />
+                       <span className="text-green-700 font-medium">
+                           Economia estimada: ~{savingsPercent}% ({estimatedAbbreviatedGames.toLocaleString()} jogos vs {totalCombinations.toLocaleString()})
+                       </span>
+                   </div>
                )}
            </div>
 
@@ -214,24 +344,35 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                )}
                <div className="flex-1">
                    <div className="text-xs text-gray-500 uppercase font-semibold flex items-center gap-1">
-                       Jogos Gerados
+                       Jogos {coveringConfig.wheelType !== 'full' ? '(Otimizado)' : '(Total)'}
                        <Info className="w-3 h-3 text-gray-400" />
                    </div>
-                   <div className={clsx("text-2xl font-bold", totalCombinations > 1000 ? "text-orange-600" : totalCombinations > 0 ? "text-green-600" : "text-gray-400")}>
-                      {totalCombinations > 0 ? totalCombinations.toLocaleString() : (activePool.length < lottery.gameSize ? `Precisa ${lottery.gameSize - activePool.length}+ números` : '0')}
+                   <div className={clsx("text-2xl font-bold", 
+                       coveringConfig.wheelType !== 'full' ? "text-indigo-600" :
+                       totalCombinations > 1000 ? "text-orange-600" : 
+                       totalCombinations > 0 ? "text-green-600" : "text-gray-400"
+                   )}>
+                      {coveringConfig.wheelType !== 'full' 
+                        ? `~${estimatedAbbreviatedGames.toLocaleString()}`
+                        : (totalCombinations > 0 ? totalCombinations.toLocaleString() : (activePool.length < lottery.gameSize ? `Precisa ${lottery.gameSize - activePool.length}+ números` : '0'))
+                      }
                    </div>
                    <div className="text-xs text-gray-400">
-                       C({activePool.length}, {lottery.gameSize})
+                       {coveringConfig.wheelType === 'full' ? `C(${activePool.length}, ${lottery.gameSize})` : `vs ${totalCombinations.toLocaleString()} total`}
                    </div>
                </div>
                <div className="flex-1 border-l pl-4 border-gray-200">
-                    <div className="text-xs text-gray-500 uppercase font-semibold">Custo Total</div>
-                    <div className="text-2xl font-bold text-gray-800">
-                        {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    <div className="text-xs text-gray-500 uppercase font-semibold">
+                        Custo {coveringConfig.wheelType !== 'full' && <span className="text-green-600">(Otimizado)</span>}
                     </div>
-                    <div className="text-xs text-gray-400">
-                        {totalCombinations} x {((lottery.basePrice || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    <div className={clsx("text-2xl font-bold", coveringConfig.wheelType !== 'full' ? "text-indigo-600" : "text-gray-800")}>
+                        {(coveringConfig.wheelType !== 'full' ? estimatedCost : totalCost).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </div>
+                    {coveringConfig.wheelType !== 'full' && (
+                        <div className="text-xs text-green-600">
+                            Economiza {(totalCost - estimatedCost).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                    )}
                </div>
            </div>
 
@@ -317,17 +458,55 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
            </div>
         </div>
         
-        {/* Info Card */}
-        <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex items-start gap-3">
-            <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-800">
-                <p className="font-semibold mb-1">Como funciona o Fechamento Total?</p>
-                <p className="opacity-80">
-                   Esta ferramenta gera <strong>todas</strong> as combinações matemáticas possíveis com os números que você selecionou. 
-                   Isso garante matematicamente o prêmio máximo se os números sorteados estiverem dentro do seu grupo selecionado.
-                   <br/>
-                   <span className="text-blue-600 font-medium">Atenção:</span> A quantidade de jogos cresce exponencialmente.
-                </p>
+        {/* Info Card - Dynamic based on wheel type */}
+        <div className={clsx(
+            "border p-4 rounded-xl flex items-start gap-3",
+            coveringConfig.wheelType === 'full' ? "bg-blue-50 border-blue-100" :
+            coveringConfig.wheelType === 'abbreviated' ? "bg-indigo-50 border-indigo-100" :
+            "bg-purple-50 border-purple-100"
+        )}>
+            <Info className={clsx(
+                "w-5 h-5 flex-shrink-0 mt-0.5",
+                coveringConfig.wheelType === 'full' ? "text-blue-600" :
+                coveringConfig.wheelType === 'abbreviated' ? "text-indigo-600" :
+                "text-purple-600"
+            )} />
+            <div className={clsx(
+                "text-sm",
+                coveringConfig.wheelType === 'full' ? "text-blue-800" :
+                coveringConfig.wheelType === 'abbreviated' ? "text-indigo-800" :
+                "text-purple-800"
+            )}>
+                {coveringConfig.wheelType === 'full' && (
+                    <>
+                        <p className="font-semibold mb-1">Fechamento Total (Full Wheel)</p>
+                        <p className="opacity-80">
+                           Gera <strong>todas</strong> as combinações matemáticas possíveis. 
+                           Garante o prêmio máximo se os números sorteados estiverem no seu grupo.
+                           <br/><span className="font-medium">Atenção:</span> A quantidade de jogos cresce exponencialmente.
+                        </p>
+                    </>
+                )}
+                {coveringConfig.wheelType === 'abbreviated' && (
+                    <>
+                        <p className="font-semibold mb-1">Fechamento Otimizado (Abbreviated Wheel)</p>
+                        <p className="opacity-80">
+                           Usa algoritmos de <strong>Covering Design</strong> para gerar menos jogos mantendo uma garantia matemática.
+                           <br/>Baseado em pesquisa acadêmica: La Jolla Repository, Combinatorial Theory.
+                           <br/><span className="font-medium">Economia típica:</span> 60-80% menos jogos que o fechamento total.
+                        </p>
+                    </>
+                )}
+                {coveringConfig.wheelType === 'balanced' && (
+                    <>
+                        <p className="font-semibold mb-1">Design Balanceado (BIBD-inspired)</p>
+                        <p className="opacity-80">
+                           Gera jogos onde cada <strong>par de números</strong> aparece aproximadamente o mesmo número de vezes.
+                           <br/>Inspirado em <strong>Balanced Incomplete Block Designs</strong>.
+                           <br/><span className="font-medium">Ideal para:</span> Cobertura uniforme sem favorecimento de combinações específicas.
+                        </p>
+                    </>
+                )}
             </div>
         </div>
     </div>
