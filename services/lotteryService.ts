@@ -558,7 +558,13 @@ const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
   let totalDecades = 0;
   let totalFibonacci = 0;
 
-  history.forEach(game => {
+  const { totalNumbers, cols } = lottery;
+  const numRows = Math.ceil(totalNumbers / cols);
+
+  history.forEach(gameFull => {
+    // Filter out extras (Trevos) for statistics
+    const game = gameFull.filter(n => n <= totalNumbers);
+
     // Primes
     totalPrimes += game.filter(n => PRIMES_SET.has(n)).length;
     
@@ -566,8 +572,6 @@ const calculateMandelStats = (history: Game[], lottery: LotteryDefinition) => {
     totalFibonacci += game.filter(n => FIBONACCI_SET.has(n)).length;
     
     // Edges (Numbers 1-cols, multiples of cols, multiples of cols + 1, last numbers)
-    const { totalNumbers, cols } = lottery;
-    const numRows = Math.ceil(totalNumbers / cols);
     const edges = game.filter(n => {
        const row = Math.ceil(n / cols); // 1-based
        const col = (n - 1) % cols + 1;  // 1-based
