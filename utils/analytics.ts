@@ -53,12 +53,14 @@ export function trackGenerateGames(params: {
   mode: string;
   count: number;
   betType?: string;
+  wheelType?: string;
 }) {
   trackEvent('generate_games', {
     lottery: params.lottery,
     mode: params.mode,
     games_count: params.count,
-    bet_type: params.betType || 'simple'
+    bet_type: params.betType || 'simple',
+    wheel_type: params.wheelType || 'full'
   });
 }
 
