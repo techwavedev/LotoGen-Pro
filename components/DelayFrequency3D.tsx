@@ -6,6 +6,7 @@ interface Delay3DData {
   x: number[];
   y: number[];
   z: number[];
+  heat: number[];
 }
 
 interface DelayFrequency3DProps {
@@ -94,10 +95,13 @@ const DelayFrequency3D: React.FC<DelayFrequency3DProps> = ({ lotteryId, lotteryC
             type: 'scatter3d',
             marker: {
                 size: 3,
-                color: data.z, // Color by frequency
-                colorscale: 'Viridis', 
+                color: data.heat, // Color by heat factor (avg delay)
+                colorscale: 'Portland', 
+                reversescale: true,
+                colorbar: { title: 'Fator de Calor' },
                 opacity: 0.8
             },
+            hovertemplate: 'Número: %{x}<br>Atraso: %{y}<br>Frequência: %{z}<br>Média Atraso: %{marker.color:.2f}<extra></extra>'
           }
         ]}
         layout={{

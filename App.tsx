@@ -449,7 +449,8 @@ function App() {
                 targetCount, gamesHistory, effectiveConfig, lottery, hotNumbers, analysis || undefined, effectiveSize
             );
             
-            setGeneratedGames(games);
+            const gamesWithExtras = ensureExtras(games);
+            setGeneratedGames(gamesWithExtras);
             analytics.trackGenerateGames({ lottery: lottery.id, mode: 'smart', count: games.length, betType });
             if (games.length < targetCount) {
              setError(`Conseguimos gerar apenas ${games.length} jogos com esses filtros restritivos.`);
@@ -552,6 +553,24 @@ function App() {
                 <p className="text-sm text-amber-700">
                   Os geradores para <strong>Dupla Sena</strong>, <strong>Timemania</strong>, <strong>Dia de Sorte</strong> e <strong>+Milionária</strong> foram recentemente adicionados e estão em fase de testes.
                   Algumas funcionalidades podem não estar totalmente disponíveis. Estamos trabalhando para melhorar continuamente!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Syncing Banner */}
+        {isSyncing && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 animate-pulse">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-full animate-spin">
+                <CircleDot className="w-5 h-5 text-blue-600 border-t-transparent" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-blue-800 mb-0.5">Sincronizando Resultados...</h4>
+                <p className="text-sm text-blue-700">
+                  Estamos baixando os resultados oficiais da Caixa para {lottery.name}. 
+                  Isso pode levar alguns instantes. Os dados aparecerão automaticamente.
                 </p>
               </div>
             </div>

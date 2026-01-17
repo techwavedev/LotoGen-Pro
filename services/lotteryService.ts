@@ -1007,7 +1007,13 @@ export const generateGamesExtended = async (
 
   while (result.length < count && attempts < MAX_ATTEMPTS) {
     attempts++;
-    const candidate = generateRandomGame(lottery);
+    const candidateFull = generateRandomGame(lottery, targetSize);
+    
+    // Split for filtering: if hasExtras, candidate (for filters) is only the Main part.
+    const candidate = lottery.hasExtras 
+        ? candidateFull.filter(n => n <= lottery.totalNumbers)
+        : candidateFull;
+        
     let isValid = true;
 
     // ============ BASIC FILTERS (from original) ============
@@ -1263,7 +1269,7 @@ export const generateGamesExtended = async (
     }
 
     if (isValid) {
-      result.push(candidate);
+      result.push(candidateFull);
     }
   }
 
