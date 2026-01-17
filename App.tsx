@@ -206,7 +206,7 @@ function App() {
   useEffect(() => {
     setSelectedGameSize(lottery.gameSize);
     // Auto-enable exclusion mode for Lotomania (gameSize >= 50)
-    setExclusionMode(lottery.gameSize >= 50);
+    setExclusionMode(false); // Always reset to standard inclusion mode on lottery change
     setCombinatorialSelection([]); // Clear selection when lottery changes
     setTrevosSelection([]); // Clear trevos selection
   }, [lottery]);
@@ -655,35 +655,39 @@ function App() {
                           {lottery.extrasName || 'Trevos'}:
                         </span>
                         <div className="flex gap-1">
-                          {latestResult.numbers
-                            .filter(num => {
-                              const n = parseInt(String(num));
-                              return n > (lottery.extrasOffset || 100) || (n >= 1 && n <= (lottery.extrasTotalNumbers || 6) && !latestResult.numbers.filter(x => parseInt(String(x)) <= lottery.totalNumbers).includes(num));
-                            })
-                            .slice(0, lottery.extrasGameSize || 2)
-                            .map((num, idx) => {
-                              const displayNum = parseInt(String(num)) > 100 ? parseInt(String(num)) - 100 : num;
-                              return (
+                          {(() => {
+                            const offset = lottery.extrasOffset || 100;
+                            // Trevos são números > offset (ex: 101-106 para offset 100)
+                            const trevos = latestResult.numbers
+                              .map(num => parseInt(String(num)))
+                              .filter(n => n > offset)
+                              .slice(0, lottery.extrasGameSize || 2);
+                            
+                            if (trevos.length > 0) {
+                              return trevos.map((num, idx) => (
                                 <span
                                   key={idx}
                                   className="inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full text-white bg-emerald-500"
                                 >
-                                  {displayNum}
+                                  {num - offset}
                                 </span>
-                              );
-                            })}
-                          {/* Fallback se trevos não estiverem no formato esperado */}
-                          {latestResult.numbers.filter(num => parseInt(String(num)) > (lottery.extrasOffset || 100)).length === 0 && 
-                           latestResult.numbers.length > lottery.drawSize && (
-                            latestResult.numbers.slice(lottery.drawSize).map((num, idx) => (
-                              <span
-                                key={idx}
-                                className="inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full text-white bg-emerald-500"
-                              >
-                                {num}
-                              </span>
-                            ))
-                          )}
+                              ));
+                            }
+                            
+                            // Fallback: se não houver trevos com offset, mostra os últimos números
+                            if (latestResult.numbers.length > lottery.drawSize) {
+                              return latestResult.numbers.slice(lottery.drawSize).map((num, idx) => (
+                                <span
+                                  key={idx}
+                                  className="inline-flex items-center justify-center w-7 h-7 text-xs font-bold rounded-full text-white bg-emerald-500"
+                                >
+                                  {num}
+                                </span>
+                              ));
+                            }
+                            
+                            return <span className="text-xs text-gray-400 italic">Não disponível</span>;
+                          })()}
                         </div>
                       </div>
                     </div>
