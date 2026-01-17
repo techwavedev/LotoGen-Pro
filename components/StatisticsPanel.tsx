@@ -2,6 +2,7 @@ import React from 'react';
 import { HistoryAnalysis, NumberStat, BalanceStat, LotteryDefinition, ExtendedHistoryAnalysis } from '../types';
 import { BarChart, TrendingUp, TrendingDown, Grid, BarChart2, ArrowRightLeft, Scale, Copy, Repeat, History, Clock } from 'lucide-react';
 import clsx from 'clsx';
+import DelayFrequency3D from './DelayFrequency3D';
 
 interface StatisticsPanelProps {
   analysis: ExtendedHistoryAnalysis | null;
@@ -134,9 +135,8 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
   // We need to lazy load Plot component because it depends on window/document
   const Plot = React.useMemo(() => React.lazy(() => import('react-plotly.js')), []);
 
-import DelayFrequency3D from './DelayFrequency3D';
 
-// ... (in container component)
+  // ... (in container component)
 
   const renderDelayHeatmap = () => {
     return (
