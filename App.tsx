@@ -574,6 +574,90 @@ function App() {
       <FilterExamplesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       <CookieConsent onAccept={initializeGA} />
 
+      {/* Full-Screen Loading Overlay */}
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex flex-col">
+          {/* Progress Bar at the very top */}
+          <div className="w-full h-1.5 bg-gray-200 overflow-hidden">
+            {operationTotal > 0 ? (
+              <div 
+                className="h-full transition-all duration-300 ease-out"
+                style={{ 
+                  backgroundColor: lottery.color,
+                  width: `${Math.min((operationProgress / operationTotal) * 100, 100)}%`
+                }}
+              />
+            ) : (
+              <div 
+                className="h-full w-1/3 rounded-full"
+                style={{ 
+                  backgroundColor: lottery.color,
+                  animation: 'shimmer 1.2s ease-in-out infinite'
+                }}
+              />
+            )}
+          </div>
+          
+          {/* CSS for shimmer animation */}
+          <style>{`
+            @keyframes shimmer {
+              0% { transform: translateX(-100%); }
+              100% { transform: translateX(400%); }
+            }
+          `}</style>
+          
+          {/* Overlay Content */}
+          <div className="flex-1 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center px-4">
+            {/* Logo and Spinner */}
+            <div className="relative mb-8">
+              <div 
+                className="w-20 h-20 rounded-full border-4 border-gray-100 animate-spin"
+                style={{ borderTopColor: lottery.color, borderRightColor: lottery.color + '40' }}
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Clover className="w-8 h-8 text-gray-300" />
+              </div>
+            </div>
+            
+            {/* Main Loading Message */}
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 text-center mb-3">
+              {loadingMessage || 'A processar...'}
+            </h2>
+            
+            {/* Step Description */}
+            {operationStep && (
+              <p className="text-gray-500 text-center text-sm md:text-base mb-4 max-w-md">
+                {operationStep}
+              </p>
+            )}
+            
+            {/* Progress Info */}
+            {operationTotal > 0 && (
+              <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-100 px-4 py-2 rounded-full">
+                <span className="font-bold" style={{ color: lottery.color }}>
+                  {operationProgress}
+                </span>
+                <span>de</span>
+                <span className="font-bold">{operationTotal}</span>
+              </div>
+            )}
+            
+            {/* Syncing specific message */}
+            {isSyncing && (
+              <div className="mt-4 flex items-center gap-2 text-blue-600 text-sm bg-blue-50 px-4 py-2 rounded-lg">
+                <CloudDownload className="w-4 h-4 animate-bounce" />
+                <span>Sincronizando com a Caixa Econômica Federal...</span>
+              </div>
+            )}
+            
+            {/* Friendly message */}
+            <p className="text-gray-400 text-xs mt-8 text-center max-w-xs">
+              Por favor, aguarde enquanto preparamos tudo para si.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Hero / Header Section */}
       <header 
         className="bg-gray-900 text-white pb-12 pt-8 px-4 shadow-lg transition-colors duration-500"
