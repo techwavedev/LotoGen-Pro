@@ -1289,9 +1289,29 @@ export const generateGamesExtended = async (
   // Cycle Missing
   const missingCycleNumbers = new Set(extendedAnalysis?.cycleStats?.missingNumbers || []);
 
+  // Pre-compute extras data for +Milionária
+  const extrasOffset = lottery.extrasOffset || 100;
+  const lastDrawExtras = history.length > 0 
+    ? history[history.length - 1].filter(n => n > extrasOffset).map(n => n - extrasOffset)
+    : [];
+  const extrasStats = extendedAnalysis?.extrasStats;
+  
+  // Verificar se filtros de extras estão ativos
+  const hasExtrasFilters = lottery.hasExtras && (
+    config.useExtrasHotColdFilter ||
+    config.useExtrasDelayFilter ||
+    config.useExtrasRepeatFilter ||
+    config.excludeHotExtrasPair ||
+    config.forceBalancedExtras
+  );
+
   while (result.length < count && attempts < MAX_ATTEMPTS) {
     attempts++;
-    const candidateFull = generateRandomGame(lottery, targetSize);
+    
+    // Use filtered extras generator if extras filters are active
+    const candidateFull = hasExtrasFilters
+      ? generateRandomGameWithFilteredExtras(lottery, config, extrasStats, lastDrawExtras, targetSize)
+      : generateRandomGame(lottery, targetSize);
     
     // Split for filtering: if hasExtras, candidate (for filters) is only the Main part.
     const candidate = lottery.hasExtras 
