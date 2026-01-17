@@ -27,6 +27,31 @@ export function trackSessionStart() {
   });
 }
 
+// Track Visit for "Observer" (Referral & Abuse Detection)
+export function trackVisit() {
+  const apiUrl = import.meta.env.VITE_API_URL;
+  if (!apiUrl) return;
+
+  try {
+    const payload = {
+      referrer: document.referrer,
+      userAgent: navigator.userAgent,
+      screen: `${window.screen.width}x${window.screen.height}`,
+      language: navigator.language,
+      path: window.location.pathname
+    };
+    
+    // Fire and forget - minimal impact on performance
+    fetch(`${apiUrl}/api/track-visit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(err => console.error('Observer tracking failed', err));
+  } catch (e) {
+    // Ignore errors
+  }
+}
+
 // ========== USER ACTION EVENTS ==========
 
 export function trackLotteryChange(lotteryId: string, lotteryName: string) {

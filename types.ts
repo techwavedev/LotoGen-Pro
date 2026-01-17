@@ -231,6 +231,7 @@ export interface DelayStats {
   delay: number;         // Quantos sorteios atrasado
   maxDelay: number;      // Maior atraso histórico
   avgDelay: number;      // Média de atraso
+  delayDistribution: Record<number, number>; // Distribuição de frequências dos atrasos { delay: count }
 }
 
 // Análise de Soma

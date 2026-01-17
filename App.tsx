@@ -44,6 +44,7 @@ function App() {
   // Fetch winners count on mount and track session
   useEffect(() => {
     analytics.trackSessionStart();
+    analytics.trackVisit();
     if (apiUrl) {
       fetch(`${apiUrl}/api/stats/winners`)
         .then(res => res.ok ? res.json() : null)

@@ -316,36 +316,39 @@ export const analyzeDelays = (history: Game[], lottery: LotteryDefinition): Dela
   const delays: DelayStats[] = [];
   
   for (let num = 1; num <= lottery.totalNumbers; num++) {
-    let lastSeenIndex = -1;
-    let maxDelay = 0;
-    let totalDelay = 0;
-    let delayCount = 0;
-    let prevIndex = -1;
-    
-    // Iterate from oldest to newest
+    let currentLastSeen = -1;
+    let currentMaxDelay = 0;
+    let currentTotalDelay = 0;
+    let currentDelayCount = 0;
+    let currentPrevIndex = -1;
+    const currentDistribution: Record<number, number> = {};
+
     for (let i = 0; i < history.length; i++) {
       if (history[i].includes(num)) {
-        if (lastSeenIndex === -1 || i > lastSeenIndex) {
-          lastSeenIndex = i;
+        if (currentLastSeen === -1 || i > currentLastSeen) {
+          currentLastSeen = i;
         }
-        if (prevIndex !== -1) {
-          const gap = i - prevIndex;
-          totalDelay += gap;
-          delayCount++;
-          maxDelay = Math.max(maxDelay, gap);
+        if (currentPrevIndex !== -1) {
+          const gap = i - currentPrevIndex - 1;
+          
+          currentTotalDelay += gap;
+          currentDelayCount++;
+          currentMaxDelay = Math.max(currentMaxDelay, gap);
+          currentDistribution[gap] = (currentDistribution[gap] || 0) + 1;
         }
-        prevIndex = i;
+        currentPrevIndex = i;
       }
     }
-    
-    const delay = lastSeenIndex === -1 ? totalGames : (totalGames - 1 - lastSeenIndex);
-    
+
+    const currentDelay = currentLastSeen === -1 ? totalGames : (totalGames - 1 - currentLastSeen);
+
     delays.push({
       number: num,
-      lastSeen: lastSeenIndex === -1 ? 0 : (totalGames - lastSeenIndex),
-      delay,
-      maxDelay,
-      avgDelay: delayCount > 0 ? Math.round(totalDelay / delayCount * 10) / 10 : 0
+      lastSeen: currentLastSeen === -1 ? 0 : (totalGames - currentLastSeen),
+      delay: currentDelay,
+      maxDelay: currentMaxDelay,
+      avgDelay: currentDelayCount > 0 ? Math.round(currentTotalDelay / currentDelayCount * 10) / 10 : 0,
+      delayDistribution: currentDistribution
     });
   }
   
