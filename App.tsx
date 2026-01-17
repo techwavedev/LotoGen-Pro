@@ -12,16 +12,32 @@ import StatisticsPanel from './components/StatisticsPanel';
 import FilterExamplesModal from './components/FilterExamplesModal';
 import CookieConsent from './components/CookieConsent';
 import { initializeGA } from './index';
+import { useLotteryData } from './hooks/useLotteryData';
 import clsx from 'clsx';
 import { utils, writeFile } from 'xlsx';
 
 function App() {
   const [currentLotteryId, setCurrentLotteryId] = useState<LotteryId>('lotofacil');
   const lottery = LOTTERIES[currentLotteryId];
+  const apiUrl = import.meta.env.VITE_API_URL;
 
-  // History State now holds Rich Entries (with metadata)
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [analysis, setAnalysis] = useState<ExtendedHistoryAnalysis | null>(null);
+  // Use the custom hook for lottery data management
+  const {
+    history,
+    analysis,
+    latestResult,
+    isLoading: isDataLoading,
+    loadingMessage: dataLoadingMessage,
+    isSyncing,
+    error: dataError,
+    clearError
+  } = useLotteryData({
+    lotteryId: currentLotteryId,
+    lottery,
+    apiUrl
+  });
+
+  // Local state for UI operations
   const [generatedGames, setGeneratedGames] = useState<Game[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
@@ -30,16 +46,12 @@ function App() {
   const [mode, setMode] = useState<'smart' | 'combinatorial'>('smart');
   const [combinatorialSelection, setCombinatorialSelection] = useState<number[]>([]);
   const [trevosSelection, setTrevosSelection] = useState<number[]>([]);
-  const [exclusionMode, setExclusionMode] = useState(false); // For Lotomania: select numbers to EXCLUDE
+  const [exclusionMode, setExclusionMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [latestResult, setLatestResult] = useState<{ draw_number: number; numbers: string[]; draw_date: string } | null>(null);
   const [winnersCount, setWinnersCount] = useState<number>(0);
-  // Covering Design state
   const [coveringConfig, setCoveringConfig] = useState<CoveringDesignConfig>(DEFAULT_COVERING_CONFIG);
   const [coveringResult, setCoveringResult] = useState<CoveringDesignResult | null>(null);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(0);
 
   // Progress tracking for long operations
   const [operationProgress, setOperationProgress] = useState(0);
@@ -49,8 +61,6 @@ function App() {
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const downloadFormRef = useRef<HTMLFormElement>(null);
-  const historyLengthRef = useRef<number>(0); // Track history length to avoid stale closures
-  const apiUrl = import.meta.env.VITE_API_URL;
 
   // Fetch winners count on mount and track session
   useEffect(() => {
@@ -68,143 +78,15 @@ function App() {
     }
   }, [apiUrl]);
 
-  // Helper: Check if history cache is valid
-  const isHistoryCacheValid = (cacheDate: string) => {
-    const cached = new Date(cacheDate);
-    const now = new Date();
-    
-    // If it's the same day and before 17:00, cache is valid
-    if (cached.toDateString() === now.toDateString()) {
-      return now.getHours() < 17;
-    }
-    // If it's yesterday after 17:00 and now is before 17:00 today, cache is valid
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (cached.toDateString() === yesterday.toDateString() && now.getHours() < 17) {
-      return true;
-    }
-    return false;
-  };
-
-  // Reset state and fetch latest result + full history when lottery changes
+  // Adjust hot number defaults based on lottery size
   useEffect(() => {
-    // Reset ref on lottery change
-    historyLengthRef.current = 0;
-    
-    setHistory([]);
-    setAnalysis(null);
-    setGeneratedGames([]);
-    setError(null);
-    setLatestResult(null);
-    
-    // Adjust hot number defaults based on lottery size
-    const currentLottery = LOTTERIES[currentLotteryId];
-    const idealHot = Math.floor(currentLottery.gameSize * 0.6); // Rule of thumb
+    const idealHot = Math.floor(lottery.gameSize * 0.6); // Rule of thumb
     setConfig(prev => ({
         ...prev,
         minHotNumbers: Math.max(0, idealHot - 2),
         maxHotNumbers: idealHot + 2
     }));
-
-    // Check cache first (independent of API)
-    const cacheKey = `history_${currentLotteryId}`;
-    const cachedData = localStorage.getItem(cacheKey);
-    const cachedDateKey = `history_${currentLotteryId}_date`;
-    const cachedDate = localStorage.getItem(cachedDateKey);
-    
-    let loadedFromCache = false;
-
-    if (cachedData && cachedDate && isHistoryCacheValid(cachedDate)) {
-      // Use cached data
-      try {
-        const rawGames = JSON.parse(cachedData);
-        if (Array.isArray(rawGames) && rawGames.length > 0) {
-            // Check if it's already HistoryEntry[] or just Game[] (legacy cache)
-            // Heuristic: check if element has 'numbers' prop
-            const isRich = rawGames[0].numbers && Array.isArray(rawGames[0].numbers);
-            const historyEntries: HistoryEntry[] = isRich 
-                ? rawGames 
-                : rawGames.map((g: any) => ({ numbers: g }));
-
-            historyLengthRef.current = historyEntries.length;
-            setHistory(historyEntries);
-            const stats = analyzeHistoryExtended(historyEntries.map(h => h.numbers), currentLottery);
-            setAnalysis(stats);
-            loadedFromCache = true;
-        }
-      } catch (e) {
-        console.error("Cache invalido", e);
-      }
-    }
-
-    // Auto-fetch from API if available
-    if (apiUrl) {
-      // Fetch latest result
-      fetch(`${apiUrl}/api/lottery/${currentLotteryId}/latest`)
-        .then(res => res.ok ? res.json() : null)
-        .then(data => {
-          if (data && data.numbers) {
-            setLatestResult({
-              draw_number: data.draw_number,
-              numbers: data.numbers,
-              draw_date: data.draw_date
-            });
-          }
-        })
-        .catch(() => {});
-
-      if (!loadedFromCache) {
-        // Fetch full history for analysis if not in cache
-        const fetchHistory = () => {
-          setIsLoading(true);
-          // Don't overwrite message if already syncing
-          setLoadingMessage(`Carregando histórico da ${currentLottery.name}...`);
-          
-          fetch(`${apiUrl}/api/lottery/${currentLotteryId}/history`)
-            .then(res => res.ok ? res.json() : null)
-            .then(data => {
-              if (data) {
-                if (data.syncing) {
-                   setIsSyncing(true);
-                   setLoadingMessage(`Sincronizando com a Caixa...`);
-                   // If syncing, scheduling a retry in 5 seconds
-                   setTimeout(fetchHistory, 5000);
-                } else {
-                   setIsSyncing(false);
-                }
-
-                if (data.games && data.games.length > 0) {
-                  // API currently returns { games: Game[] } i.e. number[][]
-                  // We must map to HistoryEntry[]
-                  const entries: HistoryEntry[] = data.games.map((g: Game) => ({ numbers: g }));
-                  
-                  // Only update if we have MORE data (use ref to avoid stale closure)
-                  if (entries.length > historyLengthRef.current) {
-                      historyLengthRef.current = entries.length;
-                      setHistory(entries);
-                      // Run analysis
-                      const stats = analyzeHistoryExtended(entries.map(h => h.numbers), currentLottery);
-                      setAnalysis(stats);
-                      
-                      localStorage.setItem(cacheKey, JSON.stringify(entries));
-                      localStorage.setItem(cachedDateKey, new Date().toISOString());
-                  }
-                }
-              }
-            })
-            .catch(() => {
-              setError('Falha ao carregar histórico. Tente o upload manual.');
-            })
-            .finally(() => {
-              setIsLoading(false);
-            });
-        };
-
-        fetchHistory();
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentLotteryId, apiUrl]);
+  }, [currentLotteryId, lottery.gameSize]);
 
   const handleLotteryChange = (id: LotteryId) => {
     setCurrentLotteryId(id);
