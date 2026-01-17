@@ -115,7 +115,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
     let maxFreq = 0;
     delayStats.forEach(ds => {
         if (ds.delayDistribution) {
-            Object.values(ds.delayDistribution).forEach(f => {
+            (Object.values(ds.delayDistribution) as number[]).forEach(f => {
                 if (f > maxFreq) maxFreq = f;
             });
         }
