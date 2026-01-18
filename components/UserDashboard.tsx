@@ -363,7 +363,7 @@ export default function UserDashboard() {
           <AlertCircle className="w-5 h-5" />
           {error}
         </div>
-      །
+      )}
 
       {games.length === 0 ? (
         <div className="p-12 text-center text-gray-500">
