@@ -28,15 +28,13 @@ interface GameResult {
 }
 
 // Number Badge Component - displays a single number as a styled circular badge
-function NumberBadge({ 
-  num, 
-  color,
-  isExtra = false
-}: { 
-  num: number; 
+interface NumberBadgeProps {
+  num: number;
   color: string;
   isExtra?: boolean;
-}) {
+}
+
+function NumberBadge({ num, color, isExtra = false }: NumberBadgeProps) {
   // For extras (trevos), display without offset
   const displayNum = isExtra ? num - 100 : num;
   
@@ -57,13 +55,12 @@ function NumberBadge({
 }
 
 // Game Numbers Display - shows all games in a saved record as bulletin-style rows
-function GameNumbersDisplay({ 
-  games, 
-  lottery 
-}: { 
-  games: number[][]; 
-  lottery: typeof LOTTERIES[LotteryId]; 
-}) {
+interface GameNumbersDisplayProps {
+  games: number[][];
+  lottery: typeof LOTTERIES[LotteryId];
+}
+
+function GameNumbersDisplay({ games, lottery }: GameNumbersDisplayProps) {
   const color = lottery?.color || '#666';
   const extrasOffset = lottery?.extrasOffset || 100;
   
