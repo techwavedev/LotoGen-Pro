@@ -28,13 +28,13 @@ interface GameResult {
 }
 
 // Number Badge Component - displays a single number as a styled circular badge
-interface NumberBadgeProps extends React.Attributes {
+interface NumberBadgeProps {
   num: number;
   color: string;
   isExtra?: boolean;
 }
 
-function NumberBadge({ num, color, isExtra = false }: NumberBadgeProps) {
+const NumberBadge: React.FC<NumberBadgeProps> = ({ num, color, isExtra = false }) => {
   // For extras (trevos), display without offset
   const displayNum = isExtra ? num - 100 : num;
   
@@ -52,7 +52,7 @@ function NumberBadge({ num, color, isExtra = false }: NumberBadgeProps) {
       {displayNum.toString().padStart(2, '0')}
     </span>
   );
-}
+};
 
 // Game Numbers Display - shows all games in a saved record as bulletin-style rows
 interface GameNumbersDisplayProps {
@@ -98,7 +98,7 @@ function GameNumbersDisplay({ games, lottery }: GameNumbersDisplayProps) {
 }
 
 // Game Card Component
-interface GameCardProps extends React.Attributes {
+interface GameCardProps {
   game: SavedGame;
   result: GameResult['bestMatch'] | null;
   onTogglePlayed: () => void;
@@ -106,7 +106,7 @@ interface GameCardProps extends React.Attributes {
   onDelete: () => void;
 }
 
-function GameCard({ game, result, onTogglePlayed, onUpdateDraws, onDelete }: GameCardProps) {
+const GameCard: React.FC<GameCardProps> = ({ game, result, onTogglePlayed, onUpdateDraws, onDelete }) => {
   const lottery = LOTTERIES[game.lottery_type as LotteryId];
   const color = lottery?.color || '#666';
   const [isEditingDraws, setIsEditingDraws] = useState(false);
