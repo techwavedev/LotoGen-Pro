@@ -941,6 +941,9 @@ function App() {
                       setHistory([]);
                       setAnalysis(null);
                       if (fileInputRef.current) fileInputRef.current.value = '';
+                      // Also clear localStorage cache
+                      localStorage.removeItem(`history_${lottery.id}`);
+                      localStorage.removeItem(`analysis_${lottery.id}`);
                     }}
                     className="p-3 text-red-500 hover:bg-red-50 rounded-xl border border-transparent hover:border-red-100 transition-colors"
                     title="Limpar histórico"
