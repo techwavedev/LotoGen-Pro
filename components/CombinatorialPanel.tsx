@@ -477,6 +477,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                         </div>
                     )}
                </div>
+            </div>
 
            {/* Number Grid */}
            <div 
