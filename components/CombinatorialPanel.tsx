@@ -643,8 +643,13 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
                 <button 
                    onClick={() => {
+                       // Reset all selections
                        setSelection([]);
                        if (setTrevosSelection) setTrevosSelection([]);
+                       // Reset covering config to defaults
+                       setCoveringConfig(DEFAULT_COVERING_CONFIG);
+                       // Reset exclusion mode (Lotomania)
+                       setExclusionMode(false);
                    }}
                    className="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                 >
