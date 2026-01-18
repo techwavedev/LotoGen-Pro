@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, LogOut, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../hooks/AuthContext';
 import AuthModal from './AuthModal';
@@ -7,6 +7,13 @@ export default function UserMenu() {
   const { user, logout, isAuthenticated } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Listen for global event to open auth modal
+  useEffect(() => {
+    const handleOpenAuth = () => setIsAuthModalOpen(true);
+    window.addEventListener('open-auth-modal', handleOpenAuth);
+    return () => window.removeEventListener('open-auth-modal', handleOpenAuth);
+  }, []);
 
   if (!isAuthenticated) {
     return (

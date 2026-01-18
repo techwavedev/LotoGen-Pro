@@ -45,9 +45,10 @@ function App() {
     apiUrl
   });
 
-  // Analytics & SEO hooks
-  const { trackPageView } = useAnalytics();
-  useSEO({ lottery });
+  // Local state for UI operations
+  const [generatedGames, setGeneratedGames] = useState<Game[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   // Init Deep Linking: Read URL param on mount
   useEffect(() => {
@@ -73,13 +74,11 @@ function App() {
     window.history.pushState({}, '', url);
 
     // Track Virtual Page View
-    trackPageView(window.location.pathname + window.location.search, `LotoGen Pro - ${lottery.name}`);
-  }, [currentLotteryId, lottery.name, trackPageView]);
+    // trackPageView(window.location.pathname + window.location.search, `LotoGen Pro - ${lottery.name}`);
+  }, [currentLotteryId, lottery.name]);
 
   // Local state for UI operations
-  const [generatedGames, setGeneratedGames] = useState<Game[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('');
+
   const [config, setConfig] = useState<ExtendedFilterConfig>(DEFAULT_EXTENDED_CONFIG);
   const [gamesCount, setGamesCount] = useState<number>(5);
   const [mode, setMode] = useState<'smart' | 'combinatorial'>('smart');
@@ -511,7 +510,8 @@ function App() {
 
   const handleSaveGames = async () => {
     if (!isAuthenticated) {
-      alert('Faça login para salvar seus jogos!');
+      // Trigger the auth modal globally
+      window.dispatchEvent(new CustomEvent('open-auth-modal'));
       return;
     }
 
@@ -1124,20 +1124,23 @@ function App() {
                   Excel
                 </button>
                 
-                {isAuthenticated && (
-                  <button
-                    onClick={handleSaveGames}
-                    disabled={!!saveSuccess}
-                    className={`
-                      flex items-center gap-2 px-6 py-3 font-bold rounded-xl shadow-lg transition-all text-white
-                      ${saveSuccess ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-900 hover:bg-gray-800'}
-                    `}
-                    style={{ backgroundColor: saveSuccess ? undefined : lottery.color }}
-                  >
-                    {saveSuccess ? <BookmarkCheck className="w-5 h-5" /> : <BookmarkPlus className="w-5 h-5" />}
-                    {saveSuccess ? 'Salvo!' : 'Salvar Jogos'}
-                  </button>
-                )}
+                <button
+                  onClick={handleSaveGames}
+                  disabled={!!saveSuccess}
+                  className={`
+                    flex items-center gap-2 px-6 py-3 font-bold rounded-xl shadow-lg transition-all text-white
+                    ${saveSuccess 
+                      ? 'bg-green-500 hover:bg-green-600' 
+                      : !isAuthenticated 
+                        ? 'bg-gray-800 hover:bg-gray-900 ring-2 ring-white/20' 
+                        : 'bg-gray-900 hover:bg-gray-800'
+                    }
+                  `}
+                  style={{ backgroundColor: saveSuccess || !isAuthenticated ? undefined : lottery.color }}
+                >
+                  {saveSuccess ? <BookmarkCheck className="w-5 h-5" /> : <BookmarkPlus className="w-5 h-5" />}
+                  {saveSuccess ? 'Salvo!' : !isAuthenticated ? 'Entrar para Salvar' : 'Salvar Jogos'}
+                </button>
               </div>
               )}
             </div>
