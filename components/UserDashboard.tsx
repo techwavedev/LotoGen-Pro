@@ -312,9 +312,15 @@ export default function UserDashboard() {
         setGames(games.map(g => 
           g.id === gameId ? { ...g, draws_played: draws, is_played: true } : g
         ));
+        setError(null);
+      } else {
+        const errorData = await res.text();
+        console.error('Error updating draws - Response:', res.status, errorData);
+        setError(`Erro ao salvar concurso: ${res.status} - ${errorData || 'Erro do servidor'}`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating draws', err);
+      setError('Erro de conexão ao atualizar concurso: ' + err.message);
     }
   };
 
