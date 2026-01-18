@@ -958,16 +958,18 @@ export const analyzeHistoryExtended = (history: Game[], lottery: LotteryDefiniti
   const baseAnalysis = analyzeHistory(history, lottery);
   const mandelStats = calculateMandelStats(history, lottery);
   const sumStats = analyzeSumRange(history, lottery);
+  const zScores = analyzeZScores(history, lottery);
 
   return {
     ...baseAnalysis,
     delayStats: analyzeDelays(history, lottery),
-    sumRangeStats: analyzeSumRange(history, lottery),
+    sumRangeStats: sumStats,
     consecutiveStats: analyzeConsecutives(history),
     trendStats: analyzeTrends(history, lottery),
     repeatBetweenDrawsStats: analyzeRepeats(history),
     quadrantStats: analyzeQuadrants(history, lottery),
     cycleStats: analyzeCycles(history, lottery),
+    zScoreStats: zScores,
     
     // Inject Mandel Stats
     primeDistributionStats: mandelStats.primeDistributionStats,

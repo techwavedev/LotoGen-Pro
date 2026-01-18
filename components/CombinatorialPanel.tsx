@@ -174,51 +174,42 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
       const minCount = Math.min(...counts);
       const countRange = maxCount - minCount || 1;
       
+      // Z-Score Integration (Standard Deviation)
+      const zScores = (analysis as any).zScoreStats?.zScores || {};
+
       for (let num = 1; num <= lottery.totalNumbers; num++) {
           const stat = analysis.allStats.find(s => s.number === num);
           const factors: string[] = [];
           let score = 0.5; // Neutral baseline
           
-          if (stat) {
-              // Factor 1: Frequency (0.3 weight) - higher is better
+          // Use Z-Score if available (much more rigorous)
+          if (typeof zScores[num] === 'number') {
+              const z = zScores[num];
+              // Normalize Z (-3 to +3) to Score (0 to 1)
+              // Z=0 -> Score 0.5
+              // Z=+2 -> Score ~0.83
+              // Z=-2 -> Score ~0.17
+              score = Math.max(0, Math.min(1, 0.5 + (z / 6))); 
+              
+              if (z > 1.5) factors.push(`🔥 Hot (Z: +${z.toFixed(2)}σ)`);
+              if (z < -1.5) factors.push(`❄️ Cold (Z: ${z.toFixed(2)}σ)`);
+              if (z > 0 && z <= 1.5) factors.push(`📈 +Avg (Z: +${z.toFixed(2)}σ)`);
+              if (z < 0 && z >= -1.5) factors.push(`📉 -Avg (Z: ${z.toFixed(2)}σ)`);
+          } else if (stat) {
+              // Fallback to simple frequency
               const freqScore = (stat.count - minCount) / countRange;
               score += (freqScore - 0.5) * 0.3;
               if (freqScore > 0.7) factors.push(`Alta freq (${stat.percentage}%)`);
-              
-              // Factor 2: Hot/Cold status (0.2 weight)
-              if (analysis.hotNumbers.includes(num)) {
-                  score += 0.15;
-                  factors.push('🔥 Top 10');
-              }
-              if (coldNumbers.includes(num)) {
-                  score -= 0.1;
-                  factors.push('❄️ Frio');
-              }
-              
-              // Factor 3: Delay (0.25 weight) - overdue numbers get bonus
+          }
+          
+          if (stat) {
+              // Factor 3: Delay (0.2 weight) - overdue numbers get bonus
               const delayStat = delayStats.find((d: any) => d.number === num);
               if (delayStat && delayStat.delay > 10) {
-                  const delayBonus = Math.min(delayStat.delay / 30, 0.25);
+                  const delayBonus = Math.min(delayStat.delay / 30, 0.2);
                   score += delayBonus;
-                  factors.push(`⏰ ${delayStat.delay} sorteios`);
+                  factors.push(`⏰ ${delayStat.delay} atrasos`);
               }
-              
-              // Factor 4: Recent Trend (0.15 weight)
-              if (recentHot.includes(num)) {
-                  score += 0.1;
-                  factors.push('📈 Tendência');
-              }
-              if (recentCold.includes(num)) {
-                  score -= 0.05;
-              }
-              
-              // Factor 5: Mathematical properties (0.1 weight)
-              const isPrime = [2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71,73,79,83,89,97].includes(num);
-              const isFibonacci = [1,2,3,5,8,13,21,34,55,89].includes(num);
-              
-              // Slight bonuses for variety (primes and fibonacci are often recommended)
-              if (isPrime) score += 0.02;
-              if (isFibonacci) score += 0.02;
           }
           
           // Clamp score between 0 and 1
@@ -484,6 +475,28 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                         </div>
                     )}
                </div>
+            {/* Smart Selection Presets (Mandel's Condensation) */}
+            <div className="flex flex-wrap gap-2 mb-4 justify-center">
+                <button
+                    onClick={() => {
+                        if (!analysis || !compositeScores) return;
+                        // Select top N numbers based on Z-Score/Composite
+                        const topNumbers = Object.entries(compositeScores)
+                            .sort(([, a], [, b]) => b.score - a.score)
+                            .slice(0, 15) // Pick top 15 (classic Mandel pool)
+                            .map(([num]) => parseInt(num))
+                            .sort((a,b) => a-b);
+                        setSelection(topNumbers);
+                        setExclusionMode(false);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 rounded-lg text-xs font-semibold hover:shadow-md transition-all border border-amber-300"
+                    title="Aplica a técnica de Condensação de Mandel: Seleciona os 15 números com maior Z-Score (Desvio Padrão positivo)"
+                >
+                    <Zap className="w-3.5 h-3.5" />
+                    Condensação Mandel (Top 15 Z-Score)
+                </button>
+            </div>
+
            </div>
 
            {/* Number Grid */}
