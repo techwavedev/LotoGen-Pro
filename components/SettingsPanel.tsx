@@ -24,6 +24,7 @@ interface SettingsPanelProps {
   onOpenExamples: () => void;
   lottery: LotteryDefinition;
   extendedAnalysis?: ExtendedHistoryAnalysis | null;
+  isMultipleBet?: boolean; // True when user selects "Múltipla" bet type
 }
 
 const SettingsPanel: React.FC<SettingsPanelProps> = ({
@@ -33,6 +34,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   onOpenExamples,
   lottery,
   extendedAnalysis,
+  isMultipleBet = false,
 }) => {
   // Integrate conflict resolution hook
   useFilterConflicts(config, setConfig, lottery);
