@@ -1017,6 +1017,7 @@ function App() {
                     onOpenExamples={() => setIsModalOpen(true)}
                     lottery={lottery}
                     extendedAnalysis={analysis}
+                    isMultipleBet={betType === 'multiple'}
                   />
                 )}
              </>

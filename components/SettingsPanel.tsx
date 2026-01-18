@@ -216,6 +216,23 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </button>
       </div>
 
+
+      {/* Warning for Multiple Bet */}
+      {isMultipleBet && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-amber-800">
+              Aposta Múltipla Selecionada
+            </p>
+            <p className="text-xs text-amber-700 mt-1">
+              Alguns filtros foram ajustados automaticamente para jogos maiores.
+              Se tiver dificuldades na geração, desative filtros avançados.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Historical Filters */}
         <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
