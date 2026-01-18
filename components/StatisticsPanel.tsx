@@ -367,7 +367,7 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ analysis, lottery }) 
                               `${repeats} trevos repetidos`}
                            </span>
                            <span className="font-bold text-gray-700">
-                             {((count / analysis.totalGames) * 100).toFixed(1)}%
+                             {((Number(count) / analysis.totalGames) * 100).toFixed(1)}%
                            </span>
                         </div>
                       ))}
