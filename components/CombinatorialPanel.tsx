@@ -27,8 +27,6 @@ interface CombinatorialPanelProps {
   // Trevos Support
   trevosSelection?: number[];
   setTrevosSelection?: (numbers: number[]) => void;
-  // Optional callback for parent reset
-  onClearAll?: () => void;
 }
 
 const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ 
@@ -284,15 +282,72 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                {/* Exclusion Mode Toggle (only for Lotomania) */}
                {isLotomania && (
                    <button
-                   onClick={() => {
-                       // Reset all selections
-                       setSelection([]);
-                       if (setTrevosSelection) setTrevosSelection([]);
-                       // Reset covering config to defaults
-                       setCoveringConfig(DEFAULT_COVERING_CONFIG);
-                       // Reset exclusion mode (Lotomania)
-                       setExclusionMode(false);
-                   }}
+                      onClick={() => { setExclusionMode(!exclusionMode); setSelection([]); }}
+                      className={clsx(
+                          "flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors border-2",
+                          exclusionMode 
+                            ? "bg-red-50 border-red-300 text-red-700" 
+                            : "bg-green-50 border-green-300 text-green-700"
+                      )}
+                   >
+                      {exclusionMode ? <Ban className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                      {exclusionMode ? 'Modo: Excluir' : 'Modo: Incluir'}
+                   </button>
+               )}
+           </div>
+
+           {/* ========== NEW: WHEEL TYPE SELECTOR ========== */}
+           <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
+               <div className="flex items-center gap-2 mb-3">
+                   <Sparkles className="w-4 h-4 text-indigo-600" />
+                   <span className="text-sm font-semibold text-indigo-800">Tipo de Fechamento</span>
+                   <span className="text-xs text-indigo-500">(Algoritmo Matemático)</span>
+               </div>
+               
+               {/* Wheel Type Buttons */}
+               <div className="flex flex-wrap gap-2 mb-3">
+                   {wheelTypes.map(({ type, icon, label, desc }) => (
+                       <button
+                           key={type}
+                           onClick={() => setCoveringConfig({ ...coveringConfig, wheelType: type })}
+                           className={clsx(
+                               "flex-1 min-w-[100px] flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all",
+                               coveringConfig.wheelType === type
+                                 ? "bg-indigo-600 text-white border-indigo-600 shadow-lg"
+                                 : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50"
+                           )}
+                       >
+                           {icon}
+                           <span className="text-sm font-semibold">{label}</span>
+                           <span className={clsx("text-xs", coveringConfig.wheelType === type ? "text-indigo-200" : "text-gray-400")}>{desc}</span>
+                       </button>
+                   ))}
+               </div>
+               
+               {/* Guarantee Selector (only for abbreviated) */}
+               {coveringConfig.wheelType === 'abbreviated' && (
+                   <div className="mt-3 pt-3 border-t border-indigo-100">
+                       <div className="flex items-center justify-between mb-2">
+                           <span className="text-sm font-medium text-indigo-800">Nível de Garantia:</span>
+                           <div className="relative">
+                               <button
+                                   onClick={() => setShowGuaranteeDropdown(!showGuaranteeDropdown)}
+                                   className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-indigo-200 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+                               >
+                                   <Target className="w-4 h-4" />
+                                   {coveringConfig.guaranteeLevel}
+                                   <ChevronDown className={clsx("w-4 h-4 transition-transform", showGuaranteeDropdown && "rotate-180")} />
+                               </button>
+                               
+                               {showGuaranteeDropdown && (
+                                   <div className="absolute top-full right-0 mt-1 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                                       {availableGuarantees.map(level => (
+                                           <button
+                                               key={level}
+                                               onClick={() => {
+                                                   setCoveringConfig({ ...coveringConfig, guaranteeLevel: level });
+                                                   setShowGuaranteeDropdown(false);
+                                               }}
                                                className={clsx(
                                                    "w-full text-left px-4 py-3 text-sm border-b border-gray-50 hover:bg-indigo-50 transition-colors",
                                                    coveringConfig.guaranteeLevel === level && "bg-indigo-100 text-indigo-800"
@@ -345,7 +400,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                        Rigor Matemático (Schönheim Bound)
-                       <span className="text-[10px] font-normal px-1.5 py-0.5 bg-green-100 rounded-full text-green-700 flex items-center gap-1"><Check className="w-3 h-3" /> Aplicado</span>
+                       <span className="text-[10px] font-normal px-1.5 py-0.5 bg-slate-200 rounded-full text-slate-600">Proof</span>
                     </h4>
                     <div className="text-xs text-slate-600 mt-1 space-y-1">
                        <p>
@@ -420,7 +475,29 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                         </div>
                     )}
                </div>
+            {/* Smart Selection Presets (Mandel's Condensation) */}
+            <div className="flex flex-wrap gap-2 mb-4 justify-center">
+                <button
+                    onClick={() => {
+                        if (!analysis || !compositeScores) return;
+                        // Select top N numbers based on Z-Score/Composite
+                        const topNumbers = Object.entries(compositeScores)
+                            .sort(([, a], [, b]) => b.score - a.score)
+                            .slice(0, 15) // Pick top 15 (classic Mandel pool)
+                            .map(([num]) => parseInt(num))
+                            .sort((a,b) => a-b);
+                        setSelection(topNumbers);
+                        setExclusionMode(false);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 rounded-lg text-xs font-semibold hover:shadow-md transition-all border border-amber-300"
+                    title="Aplica a técnica de Condensação de Mandel: Seleciona os 15 números com maior Z-Score (Desvio Padrão positivo)"
+                >
+                    <Zap className="w-3.5 h-3.5" />
+                    Condensação Mandel (Top 15 Z-Score)
+                </button>
             </div>
+
+           </div>
 
            {/* Number Grid */}
            <div 
@@ -549,13 +626,8 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
             <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-gray-100">
                 <button 
                    onClick={() => {
-                       // Reset all selections
                        setSelection([]);
                        if (setTrevosSelection) setTrevosSelection([]);
-                       // Reset covering config to defaults
-                       setCoveringConfig(DEFAULT_COVERING_CONFIG);
-                       // Reset exclusion mode (Lotomania)
-                       setExclusionMode(false);
                    }}
                    className="px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                 >
