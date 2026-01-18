@@ -491,7 +491,14 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                     )}
                </div>
             {/* Smart Selection Presets (Mandel's Condensation) */}
-            {analysis && compositeScores && (
+            {analysis && compositeScores && (() => {
+                // Dynamic selection count: gameSize + 2 for meaningful combinations
+                const selectionCount = Math.min(lottery.gameSize + 2, lottery.totalNumbers);
+                const expectedGames = selectionCount > lottery.gameSize 
+                    ? Math.round(selectionCount * (selectionCount - 1) / 2) // Rough estimate
+                    : 1;
+                
+                return (
             <div className="mt-4 p-3 bg-gradient-to-r from-amber-50 via-amber-100 to-yellow-50 rounded-xl border-2 border-amber-200">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div className="flex items-start gap-3">
@@ -504,7 +511,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                                 <span className="text-[10px] font-normal px-1.5 py-0.5 bg-amber-200 rounded-full text-amber-700">Mandel</span>
                             </h4>
                             <p className="text-xs text-amber-700 mt-0.5">
-                                Seleciona os <strong>15 melhores números</strong> baseado em Z-Score.
+                                Seleciona os <strong>{selectionCount} melhores números</strong> baseado em Z-Score.
                             </p>
                         </div>
                     </div>
@@ -512,7 +519,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                         onClick={() => {
                             const topNumbers = Object.entries(compositeScores)
                                 .sort(([, a], [, b]) => b.score - a.score)
-                                .slice(0, 15)
+                                .slice(0, selectionCount)
                                 .map(([num]) => parseInt(num))
                                 .sort((a,b) => a-b);
                             setSelection(topNumbers);
@@ -525,7 +532,8 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                     </button>
                 </div>
             </div>
-            )}
+                );
+            })()}
 
            </div>
 
