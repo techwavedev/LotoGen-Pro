@@ -27,6 +27,8 @@ interface CombinatorialPanelProps {
   // Trevos Support
   trevosSelection?: number[];
   setTrevosSelection?: (numbers: number[]) => void;
+  // Optional callback for parent reset
+  onClearAll?: () => void;
 }
 
 const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ 
@@ -476,26 +478,41 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                     )}
                </div>
             {/* Smart Selection Presets (Mandel's Condensation) */}
-            <div className="flex flex-wrap gap-2 mb-4 justify-center">
-                <button
-                    onClick={() => {
-                        if (!analysis || !compositeScores) return;
-                        // Select top N numbers based on Z-Score/Composite
-                        const topNumbers = Object.entries(compositeScores)
-                            .sort(([, a], [, b]) => b.score - a.score)
-                            .slice(0, 15) // Pick top 15 (classic Mandel pool)
-                            .map(([num]) => parseInt(num))
-                            .sort((a,b) => a-b);
-                        setSelection(topNumbers);
-                        setExclusionMode(false);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 rounded-lg text-xs font-semibold hover:shadow-md transition-all border border-amber-300"
-                    title="Aplica a técnica de Condensação de Mandel: Seleciona os 15 números com maior Z-Score (Desvio Padrão positivo)"
-                >
-                    <Zap className="w-3.5 h-3.5" />
-                    Condensação Mandel (Top 15 Z-Score)
-                </button>
+            {analysis && compositeScores && (
+            <div className="mt-4 p-3 bg-gradient-to-r from-amber-50 via-amber-100 to-yellow-50 rounded-xl border-2 border-amber-200">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                    <div className="flex items-start gap-3">
+                        <div className="p-1.5 bg-amber-200 rounded-lg text-amber-800">
+                            <Zap className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-bold text-amber-900 flex items-center gap-2">
+                                💡 Sugestão Inteligente
+                                <span className="text-[10px] font-normal px-1.5 py-0.5 bg-amber-200 rounded-full text-amber-700">Mandel</span>
+                            </h4>
+                            <p className="text-xs text-amber-700 mt-0.5">
+                                Seleciona os <strong>15 melhores números</strong> baseado em Z-Score.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => {
+                            const topNumbers = Object.entries(compositeScores)
+                                .sort(([, a], [, b]) => b.score - a.score)
+                                .slice(0, 15)
+                                .map(([num]) => parseInt(num))
+                                .sort((a,b) => a-b);
+                            setSelection(topNumbers);
+                            setExclusionMode(false);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-sm font-bold hover:shadow-lg hover:scale-105 transition-all"
+                    >
+                        <Sparkles className="w-4 h-4" />
+                        Aplicar
+                    </button>
+                </div>
             </div>
+            )}
 
            </div>
 
