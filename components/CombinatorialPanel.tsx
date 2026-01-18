@@ -350,49 +350,24 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                    ))}
                </div>
                
-               {/* Guarantee Selector (only for abbreviated) */}
+               {/* Simple explanation for Econômico mode */}
                {coveringConfig.wheelType === 'abbreviated' && (
                    <div className="mt-3 pt-3 border-t border-indigo-100">
-                       <div className="flex items-center justify-between mb-2">
-                           <span className="text-sm font-medium text-indigo-800">Nível de Garantia:</span>
-                           <div className="relative">
-                               <button
-                                   onClick={() => setShowGuaranteeDropdown(!showGuaranteeDropdown)}
-                                   className="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border border-indigo-200 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
-                               >
-                                   <Target className="w-4 h-4" />
-                                   {coveringConfig.guaranteeLevel}
-                                   <ChevronDown className={clsx("w-4 h-4 transition-transform", showGuaranteeDropdown && "rotate-180")} />
-                               </button>
-                               
-                               {showGuaranteeDropdown && (
-                                   <div className="absolute top-full right-0 mt-1 w-64 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
-                                       {availableGuarantees.map(level => (
-                                           <button
-                                               key={level}
-                                               onClick={() => {
-                                                   setCoveringConfig({ ...coveringConfig, guaranteeLevel: level });
-                                                   setShowGuaranteeDropdown(false);
-                                               }}
-                                               className={clsx(
-                                                   "w-full text-left px-4 py-3 text-sm border-b border-gray-50 hover:bg-indigo-50 transition-colors",
-                                                   coveringConfig.guaranteeLevel === level && "bg-indigo-100 text-indigo-800"
-                                               )}
-                                           >
-                                               <div className="font-semibold">{level}</div>
-                                               <div className="text-xs text-gray-500">{GUARANTEE_DESCRIPTIONS[level]}</div>
-                                           </button>
-                                       ))}
-                                   </div>
-                               )}
-                           </div>
-                       </div>
-                       <p className="text-xs text-indigo-600 bg-indigo-100 p-2 rounded">
-                           💡 {GUARANTEE_DESCRIPTIONS[coveringConfig.guaranteeLevel]}
+                       <p className="text-sm text-indigo-700">
+                           ✨ O modo <strong>Econômico</strong> usa algoritmos matemáticos para gerar o mínimo de jogos
+                           mantendo boas chances de prémio.
                        </p>
+                       <details className="mt-2">
+                           <summary className="text-xs text-indigo-500 cursor-pointer hover:text-indigo-700">
+                               Ver detalhes técnicos...
+                           </summary>
+                           <div className="mt-2 p-2 bg-indigo-100 rounded text-xs text-indigo-600">
+                               <p>Garantia atual: <strong>{coveringConfig.guaranteeLevel}</strong></p>
+                               <p className="mt-1">{GUARANTEE_DESCRIPTIONS[coveringConfig.guaranteeLevel]}</p>
+                           </div>
+                       </details>
                    </div>
                )}
-               
                {/* Savings Preview */}
                {coveringConfig.wheelType !== 'full' && totalCombinations > 0 && (
                    <div className="mt-3 flex items-center gap-2 text-sm">
