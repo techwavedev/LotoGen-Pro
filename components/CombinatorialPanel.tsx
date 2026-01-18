@@ -140,13 +140,26 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
   const estimatedAbbreviatedGames = useMemo(() => {
     if (coveringConfig.wheelType === 'full') return totalCombinations;
     if (abbreviatedStats) return abbreviatedStats.abbreviatedCount;
-    // Rough estimate: 20-40% of full wheel depending on guarantee
+    
+    // For Balanced mode: match the actual algorithm limit (min of 200 or 50% of full)
+    if (coveringConfig.wheelType === 'balanced') {
+      const fullWheelCount = totalCombinations;
+      return Math.min(200, Math.ceil(fullWheelCount * 0.5));
+    }
+    
+    // For Abbreviated mode: use Schönheim bound as realistic minimum estimate
+    // The greedy algorithm typically produces results close to this bound
+    if (coveringConfig.wheelType === 'abbreviated' && theoreticalMinGames && theoreticalMinGames > 0) {
+      return theoreticalMinGames;
+    }
+    
+    // Fallback rough estimate if no theoretical bound available
     const ratio = coveringConfig.guaranteeLevel === '3-if-5' ? 0.15 :
                   coveringConfig.guaranteeLevel === '4-if-5' ? 0.25 :
                   coveringConfig.guaranteeLevel === '5-if-6' ? 0.30 :
                   0.20;
     return Math.max(1, Math.ceil(totalCombinations * ratio));
-  }, [coveringConfig, totalCombinations, abbreviatedStats]);
+  }, [coveringConfig, totalCombinations, abbreviatedStats, theoreticalMinGames]);
   
   const estimatedCost = estimatedAbbreviatedGames * (lottery.basePrice || 0);
   const savingsPercent = abbreviatedStats?.savingsPercent ?? 
