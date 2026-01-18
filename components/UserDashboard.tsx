@@ -28,7 +28,7 @@ interface GameResult {
 }
 
 // Number Badge Component - displays a single number as a styled circular badge
-interface NumberBadgeProps {
+interface NumberBadgeProps extends React.Attributes {
   num: number;
   color: string;
   isExtra?: boolean;
@@ -98,19 +98,15 @@ function GameNumbersDisplay({ games, lottery }: GameNumbersDisplayProps) {
 }
 
 // Game Card Component
-function GameCard({ 
-  game, 
-  result, 
-  onTogglePlayed, 
-  onUpdateDraws,
-  onDelete 
-}: {
+interface GameCardProps extends React.Attributes {
   game: SavedGame;
   result: GameResult['bestMatch'] | null;
   onTogglePlayed: () => void;
   onUpdateDraws: (draws: string) => void;
   onDelete: () => void;
-}) {
+}
+
+function GameCard({ game, result, onTogglePlayed, onUpdateDraws, onDelete }: GameCardProps) {
   const lottery = LOTTERIES[game.lottery_type as LotteryId];
   const color = lottery?.color || '#666';
   const [isEditingDraws, setIsEditingDraws] = useState(false);
