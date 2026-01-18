@@ -1106,6 +1106,7 @@ function App() {
                   </button>
                 )}
               </div>
+              )}
             </div>
 
             {/* Skeleton Loader */}
