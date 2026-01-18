@@ -1387,7 +1387,7 @@ export const generateGamesExtended = async (
     // 2. Basic Pattern Filters
     if (config.excludeAllEven || config.excludeAllOdd) {
       const evenCount = candidate.filter(n => n % 2 === 0).length;
-      if (config.excludeAllEven && evenCount === lottery.gameSize) isValid = false;
+      if (config.excludeAllEven && evenCount === targetSize) isValid = false;
       if (config.excludeAllOdd && evenCount === 0) isValid = false; 
     }
     if (!isValid) continue;
@@ -1399,7 +1399,7 @@ export const generateGamesExtended = async (
     if (!isValid) continue;
 
     if (config.excludeSequences) {
-      if (isSequential(candidate, lottery.gameSize)) isValid = false;
+      if (isSequential(candidate, targetSize)) isValid = false;
     }
     if (!isValid) continue;
 
@@ -1561,7 +1561,7 @@ export const generateGamesExtended = async (
       const highCount = candidate.length - lowCount;
       const diff = Math.abs(lowCount - highCount);
       // Allow max 30% imbalance (configurable threshold)
-      const maxImbalance = Math.ceil(lottery.gameSize * 0.3);
+      const maxImbalance = Math.ceil(targetSize * 0.3);
       if (diff > maxImbalance) {
         isValid = false;
       }
@@ -1571,7 +1571,7 @@ export const generateGamesExtended = async (
     // 9. CYCLE FILTER - Forçar números do ciclo
     if (config.useCycleFilter && missingCycleNumbers.size > 0) {
          const missingCount = missingCycleNumbers.size;
-         const gameSize = lottery.gameSize;
+         const gameSize = targetSize;
          
          // Calculate how many missing numbers we should require based on how many are missing
          // If few missing (1-3): require ALL (strong strategy to close cycle)
