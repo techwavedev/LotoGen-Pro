@@ -147,10 +147,21 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
       return Math.min(200, Math.ceil(fullWheelCount * 0.5));
     }
     
-    // For Abbreviated mode: use Schönheim bound as realistic minimum estimate
-    // The greedy algorithm typically produces results close to this bound
-    if (coveringConfig.wheelType === 'abbreviated' && theoreticalMinGames && theoreticalMinGames > 0) {
-      return theoreticalMinGames;
+    // For Abbreviated mode: when gameSize is close to pool size, very few games needed
+    // Each game covers a huge portion of t-subsets
+    if (coveringConfig.wheelType === 'abbreviated') {
+      const poolSize = activePool.length;
+      const gameSize = lottery.gameSize;
+      
+      // If pool barely exceeds gameSize, 1-3 games typically cover everything
+      if (poolSize <= gameSize + 3) {
+        return Math.max(1, poolSize - gameSize + 1);
+      }
+      
+      // For larger pools, use Schönheim bound if available, else rough estimate
+      if (theoreticalMinGames && theoreticalMinGames > 0) {
+        return theoreticalMinGames;
+      }
     }
     
     // Fallback rough estimate if no theoretical bound available
@@ -159,7 +170,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                   coveringConfig.guaranteeLevel === '5-if-6' ? 0.30 :
                   0.20;
     return Math.max(1, Math.ceil(totalCombinations * ratio));
-  }, [coveringConfig, totalCombinations, abbreviatedStats, theoreticalMinGames]);
+  }, [coveringConfig, totalCombinations, abbreviatedStats, theoreticalMinGames, activePool.length, lottery.gameSize]);
   
   const estimatedCost = estimatedAbbreviatedGames * (lottery.basePrice || 0);
   const savingsPercent = abbreviatedStats?.savingsPercent ?? 
@@ -460,7 +471,9 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                )}
                <div className="flex-1">
                    <div className="text-xs text-gray-500 uppercase font-semibold flex items-center gap-1">
-                       Jogos {coveringConfig.wheelType !== 'full' ? '(Otimizado)' : '(Total)'}
+                       Jogos {coveringConfig.wheelType !== 'full' 
+                         ? (abbreviatedStats ? '(Gerado)' : '(Estimativa ≈)')
+                         : '(Total)'}
                        <Info className="w-3 h-3 text-gray-400" />
                    </div>
                    <div className={clsx("text-2xl font-bold", 
