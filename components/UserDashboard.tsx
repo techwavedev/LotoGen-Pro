@@ -9,7 +9,7 @@ import { LOTTERIES, LotteryId } from '../types';
 interface SavedGame {
   id: number;
   lottery_type: string;
-  numbers: number[];
+  numbers: number[][];  // Array of games, each game is an array of numbers
   note: string | null;
   is_played: boolean;
   draws_played: string | null;
@@ -27,48 +27,72 @@ interface GameResult {
   } | null;
 }
 
-// Ticket Grid Component - displays numbers in official lottery format
-function TicketGrid({ 
-  numbers, 
-  lottery, 
-  matchingNumbers = [] 
+// Number Badge Component - displays a single number as a styled circular badge
+function NumberBadge({ 
+  num, 
+  color,
+  isExtra = false
 }: { 
-  numbers: number[]; 
-  lottery: typeof LOTTERIES[LotteryId]; 
-  matchingNumbers?: number[];
+  num: number; 
+  color: string;
+  isExtra?: boolean;
 }) {
-  const totalNumbers = lottery.totalNumbers;
-  const cols = totalNumbers <= 25 ? 5 : totalNumbers <= 60 ? 10 : 10;
-  const rows = Math.ceil(totalNumbers / cols);
+  // For extras (trevos), display without offset
+  const displayNum = isExtra ? num - 100 : num;
   
-  const selectedSet = new Set(numbers);
-  const matchingSet = new Set(matchingNumbers);
-
   return (
-    <div 
-      className="inline-grid gap-0.5 p-2 bg-gray-50 rounded-lg border border-gray-200"
-      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+    <span
+      className={`
+        inline-flex items-center justify-center 
+        w-8 h-8 md:w-9 md:h-9 
+        text-xs md:text-sm font-bold text-white 
+        rounded-full shadow-sm
+        ${isExtra ? 'ring-2 ring-yellow-300' : ''}
+      `}
+      style={{ backgroundColor: isExtra ? '#10B981' : color }}
     >
-      {Array.from({ length: totalNumbers }, (_, i) => i + 1).map(num => {
-        const isSelected = selectedSet.has(num);
-        const isMatch = matchingSet.has(num);
+      {displayNum.toString().padStart(2, '0')}
+    </span>
+  );
+}
+
+// Game Numbers Display - shows all games in a saved record as bulletin-style rows
+function GameNumbersDisplay({ 
+  games, 
+  lottery 
+}: { 
+  games: number[][]; 
+  lottery: typeof LOTTERIES[LotteryId]; 
+}) {
+  const color = lottery?.color || '#666';
+  const extrasOffset = lottery?.extrasOffset || 100;
+  
+  return (
+    <div className="space-y-3">
+      {games.map((game, gameIdx) => {
+        // Separate main numbers from extras (trevos)
+        const mainNumbers = game.filter(n => n <= extrasOffset).sort((a, b) => a - b);
+        const extraNumbers = game.filter(n => n > extrasOffset).sort((a, b) => a - b);
         
         return (
-          <div
-            key={num}
-            className={`
-              w-6 h-6 md:w-7 md:h-7 flex items-center justify-center text-[10px] md:text-xs font-bold rounded
-              transition-all
-              ${isSelected 
-                ? isMatch 
-                  ? 'bg-green-500 text-white shadow-md scale-110 ring-2 ring-green-300' 
-                  : 'text-white shadow-sm'
-                : 'bg-white text-gray-300 border border-gray-100'
-              }
-            `}
-            style={isSelected && !isMatch ? { backgroundColor: lottery.color } : {}}
-          >
-            {num.toString().padStart(2, '0')}
+          <div key={gameIdx} className="flex flex-wrap items-center gap-1.5">
+            {/* Game number label */}
+            <span className="text-xs text-gray-400 font-medium mr-2">Jogo {gameIdx + 1}:</span>
+            
+            {/* Main numbers */}
+            {mainNumbers.map((num, idx) => (
+              <NumberBadge key={`main-${idx}`} num={num} color={color} />
+            ))}
+            
+            {/* Extras (trevos) with separator */}
+            {extraNumbers.length > 0 && (
+              <>
+                <span className="text-gray-300 mx-1">|</span>
+                {extraNumbers.map((num, idx) => (
+                  <NumberBadge key={`extra-${idx}`} num={num} color={color} isExtra />
+                ))}
+              </>
+            )}
           </div>
         );
       })}
@@ -116,12 +140,11 @@ function GameCard({
         </div>
       </div>
 
-      {/* Ticket Grid */}
-      <div className="p-4 flex justify-center overflow-x-auto">
-        <TicketGrid 
-          numbers={game.numbers} 
-          lottery={lottery} 
-          matchingNumbers={result?.matching_numbers || []}
+      {/* Games Display - Bulletin Style */}
+      <div className="p-4 overflow-x-auto">
+        <GameNumbersDisplay 
+          games={game.numbers} 
+          lottery={lottery}
         />
       </div>
 
