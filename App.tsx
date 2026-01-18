@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload, X } from 'lucide-react';
+import { Upload, Play, Download, Trash2, Clover, AlertCircle, FileSpreadsheet, Plus, Copy, Dna, Grid, CheckCircle2, CircleDot, CloudDownload, X, Check } from 'lucide-react';
 import { Game, DEFAULT_EXTENDED_CONFIG, ExtendedFilterConfig, ExtendedHistoryAnalysis, LOTTERIES, LotteryDefinition, LotteryId, LOTTERY_MANDEL_RECOMMENDATIONS, CoveringDesignConfig, DEFAULT_COVERING_CONFIG, CoveringDesignResult, HistoryEntry } from './types';
 import { parseHistoryFile, generateGamesExtended, analyzeHistoryExtended, generateCombinatorialGames } from './services/lotteryService';
 import { generateCoveringDesign, getCombinations } from './services/coveringDesigns';
@@ -96,6 +96,7 @@ function App() {
   const [showDashboard, setShowDashboard] = useState(false);
   const { isAuthenticated, token } = useAuth();
   const [saveSuccess, setSaveSuccess] = useState<number | null>(null);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   // Listen for dashboard open event from UserMenu
   useEffect(() => {
@@ -502,10 +503,41 @@ function App() {
     writeFile(wb, `Jogos_${lottery.name}_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
-  const copyToClipboard = () => {
-    const text = generatedGames.map(g => g.map(n => n.toString().padStart(2, '0')).join(' ')).join('\n');
-    navigator.clipboard.writeText(text);
-    alert('Jogos copiados para a área de transferência!');
+  const copyToClipboard = async () => {
+    // Format each game with lottery name and proper formatting for Caixa app
+    const formatGame = (game: Game, idx: number) => {
+      const mainNumbers = game
+        .filter(n => n <= lottery.totalNumbers)
+        .sort((a, b) => a - b)
+        .map(n => n.toString().padStart(2, '0'))
+        .join(' ');
+
+      // Handle extras (Trevos) for +Milionária
+      if (lottery.hasExtras) {
+        const offset = lottery.extrasOffset || 100;
+        const extras = game
+          .filter(n => n > offset)
+          .map(n => n - offset)
+          .sort((a, b) => a - b)
+          .join(' ');
+        
+        if (extras) {
+          return `${lottery.name} - Jogo ${idx + 1}: ${mainNumbers} | ${lottery.extrasName || 'Trevos'}: ${extras}`;
+        }
+      }
+      
+      return `${lottery.name} - Jogo ${idx + 1}: ${mainNumbers}`;
+    };
+
+    const text = generatedGames.map((g, idx) => formatGame(g, idx)).join('\n');
+    
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2500);
+    } catch (err) {
+      console.error('Falha ao copiar:', err);
+    }
   };
 
   const handleSaveGames = async () => {
