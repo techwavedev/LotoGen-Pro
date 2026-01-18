@@ -1145,10 +1145,16 @@ function App() {
                 <div className="flex gap-2">
                   <button
                   onClick={copyToClipboard}
-                  className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-bold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm"
+                  className={clsx(
+                    "flex items-center gap-2 px-6 py-3 font-bold rounded-xl border-2 transition-all shadow-sm",
+                    copySuccess
+                      ? "bg-green-50 text-green-700 border-green-300"
+                      : "bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                  )}
+                  title="Copiar jogos formatados para usar no app Caixa"
                 >
-                  <Copy className="w-5 h-5" />
-                  Copiar
+                  {copySuccess ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  {copySuccess ? 'Copiado!' : 'Copiar'}
                 </button>
                 <button
                   onClick={handleDownload}
