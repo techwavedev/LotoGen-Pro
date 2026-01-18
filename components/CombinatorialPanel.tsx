@@ -272,11 +272,29 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
   const showTrevosSelector = lottery.hasExtras && lottery.extrasTotalNumbers && setTrevosSelection;
   const trevosGameSize = lottery.extrasGameSize || 2;
 
-  // Wheel type options - User-friendly labels
-  const wheelTypes: { type: WheelType; icon: React.ReactNode; label: string; desc: string }[] = [
-    { type: 'full', icon: <Grid className="w-4 h-4" />, label: 'Todas', desc: '100% cobertura' },
-    { type: 'abbreviated', icon: <Target className="w-4 h-4" />, label: 'Econômico', desc: 'Menor custo' },
-    { type: 'balanced', icon: <Scale className="w-4 h-4" />, label: 'Balanceado', desc: 'Custo × Cobertura' },
+  // Wheel type options - User-friendly labels with tooltips
+  const wheelTypes: { type: WheelType; icon: React.ReactNode; label: string; desc: string; tooltip: string }[] = [
+    { 
+      type: 'full', 
+      icon: <Grid className="w-4 h-4" />, 
+      label: 'Todas', 
+      desc: '100% cobertura',
+      tooltip: '✅ TODAS AS COMBINAÇÕES\n\n📊 O quê: Gera TODAS as combinações possíveis dos números selecionados.\n\n👍 Vantagem: Garante 100% de cobertura.\n\n⚠️ Atenção: O custo cresce MUITO rápido (ex: 18 números = 816 jogos).\n\n🎯 Recomendado: Para poucos números extras (16-18 para Lotofácil).'
+    },
+    { 
+      type: 'abbreviated', 
+      icon: <Target className="w-4 h-4" />, 
+      label: 'Econômico', 
+      desc: 'Menor custo',
+      tooltip: '💰 ECONÔMICO (Fechamento Reduzido)\n\n📊 O quê: Usa algoritmo greedy para encontrar o MÍNIMO de jogos que cobrem todos os subconjuntos.\n\n👍 Vantagem: Máxima economia, baseado no Limite de Schönheim.\n\n⚠️ Atenção: Cobertura matemática parcial (não 100%).\n\n🎯 Recomendado: Quando quer economizar e aceita risco calculado.'
+    },
+    { 
+      type: 'balanced', 
+      icon: <Scale className="w-4 h-4" />, 
+      label: 'Balanceado', 
+      desc: 'Custo × Cobertura',
+      tooltip: '⚖️ BALANCEADO\n\n📊 O quê: Gera até 200 jogos com distribuição uniforme dos números selecionados.\n\n👍 Vantagem: Equilíbrio entre custo e cobertura, cada número aparece quantidade similar.\n\n⚠️ Limite: Máximo de 200 jogos.\n\n🎯 Recomendado: Para quem quer boa cobertura sem exagerar no custo.'
+    },
   ];
 
   // Available guarantee levels based on game size
@@ -332,12 +350,13 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                
                {/* Wheel Type Buttons */}
                <div className="flex flex-wrap gap-2 mb-3">
-                   {wheelTypes.map(({ type, icon, label, desc }) => (
+                   {wheelTypes.map(({ type, icon, label, desc, tooltip }) => (
                        <button
                            key={type}
                            onClick={() => setCoveringConfig({ ...coveringConfig, wheelType: type })}
+                           title={tooltip}
                            className={clsx(
-                               "flex-1 min-w-[100px] flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all",
+                               "flex-1 min-w-[100px] flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all cursor-help",
                                coveringConfig.wheelType === type
                                  ? "bg-indigo-600 text-white border-indigo-600 shadow-lg"
                                  : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50"
@@ -349,6 +368,23 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                        </button>
                    ))}
                </div>
+               
+               {/* Otimizar Tudo Button */}
+               <button
+                   onClick={() => {
+                       // Apply best settings: Econômico mode with cycle filter
+                       setCoveringConfig({
+                           ...coveringConfig,
+                           wheelType: 'abbreviated',
+                           guaranteeLevel: lottery.gameSize <= 6 ? '3-if-5' : '3-if-5',
+                       });
+                   }}
+                   className="w-full py-2 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-emerald-700 transition-all flex items-center justify-center gap-2"
+                   title="Aplica o modo Econômico com configurações otimizadas para máxima economia"
+               >
+                   <Sparkles className="w-4 h-4" />
+                   Otimizar Tudo (Recomendado)
+               </button>
                
                {/* Simple explanation for Econômico mode */}
                {coveringConfig.wheelType === 'abbreviated' && (
