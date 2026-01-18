@@ -40,6 +40,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#930089',
     colorName: 'purple',
     downloadParam: 'lf',
+    caixaModalidade: 'Lotofácil',
     basePrice: 3.50
   },
   megasena: {
@@ -54,6 +55,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#209869',
     colorName: 'green',
     downloadParam: 'ms',
+    caixaModalidade: 'Mega-Sena',
     basePrice: 6.00
   },
   quina: {
@@ -68,6 +70,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#264987',
     colorName: 'blue',
     downloadParam: 'qi',
+    caixaModalidade: 'Quina',
     basePrice: 3.00
   },
   lotomania: {
@@ -82,6 +85,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#F78100',
     colorName: 'orange',
     downloadParam: 'lm',
+    caixaModalidade: 'Lotomania',
     basePrice: 3.00
   },
   duplasena: {
@@ -96,6 +100,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#A61324',
     colorName: 'red',
     downloadParam: 'ds',
+    caixaModalidade: 'Dupla Sena',
     basePrice: 3.00
   },
   timemania: {
@@ -110,6 +115,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#3EA86D',
     colorName: 'green',
     downloadParam: 'tm',
+    caixaModalidade: 'Timemania',
     basePrice: 3.50
   },
   diadesorte: {
@@ -124,6 +130,7 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     color: '#FFAB00',
     colorName: 'amber',
     downloadParam: 'dd',
+    caixaModalidade: 'Dia de Sorte',
     basePrice: 2.50
   },
   maismilionaria: {
@@ -137,7 +144,8 @@ export const LOTTERIES: Record<LotteryId, LotteryDefinition> = {
     visualCols: 10,
     color: '#1e293b', // Slate 800 - Elegant Dark
     colorName: 'slate',
-    downloadParam: 'mm', // Guessing 'mm'
+    downloadParam: 'mm',
+    caixaModalidade: '+Milionária',
     basePrice: 6.00,
     hasExtras: true,
     extrasTotalNumbers: 6,
