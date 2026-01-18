@@ -402,7 +402,7 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                        Rigor Matemático (Schönheim Bound)
-                       <span className="text-[10px] font-normal px-1.5 py-0.5 bg-slate-200 rounded-full text-slate-600">Proof</span>
+                       <span className="text-[10px] font-normal px-1.5 py-0.5 bg-green-100 rounded-full text-green-700 flex items-center gap-1"><Check className="w-3 h-3" /> Aplicado</span>
                     </h4>
                     <div className="text-xs text-slate-600 mt-1 space-y-1">
                        <p>
