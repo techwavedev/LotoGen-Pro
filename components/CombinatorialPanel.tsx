@@ -272,11 +272,11 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
   const showTrevosSelector = lottery.hasExtras && lottery.extrasTotalNumbers && setTrevosSelection;
   const trevosGameSize = lottery.extrasGameSize || 2;
 
-  // Wheel type options
+  // Wheel type options - User-friendly labels
   const wheelTypes: { type: WheelType; icon: React.ReactNode; label: string; desc: string }[] = [
-    { type: 'full', icon: <Grid className="w-4 h-4" />, label: 'Total', desc: 'Todas combinações' },
-    { type: 'abbreviated', icon: <Target className="w-4 h-4" />, label: 'Otimizado', desc: 'Menos jogos, garantia' },
-    { type: 'balanced', icon: <Scale className="w-4 h-4" />, label: 'Balanceado', desc: 'Cobertura uniforme' },
+    { type: 'full', icon: <Grid className="w-4 h-4" />, label: 'Todas', desc: '100% cobertura' },
+    { type: 'abbreviated', icon: <Target className="w-4 h-4" />, label: 'Econômico', desc: 'Menor custo' },
+    { type: 'balanced', icon: <Scale className="w-4 h-4" />, label: 'Balanceado', desc: 'Custo × Cobertura' },
   ];
 
   // Available guarantee levels based on game size
