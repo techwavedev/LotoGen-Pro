@@ -322,12 +322,12 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                )}
            </div>
 
-           {/* ========== NEW: WHEEL TYPE SELECTOR ========== */}
+           {/* ========== WHEEL TYPE SELECTOR ========== */}
            <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-100">
                <div className="flex items-center gap-2 mb-3">
                    <Sparkles className="w-4 h-4 text-indigo-600" />
-                   <span className="text-sm font-semibold text-indigo-800">Tipo de Fechamento</span>
-                   <span className="text-xs text-indigo-500">(Algoritmo Matemático)</span>
+                   <span className="text-sm font-semibold text-indigo-800">Escolha sua estratégia</span>
+                   <span className="text-xs text-indigo-500">Prémios a partir de 11 acertos</span>
                </div>
                
                {/* Wheel Type Buttons */}
