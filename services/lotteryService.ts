@@ -3,7 +3,7 @@ import {
   Game, FilterConfig, HistoryAnalysis, NumberStat, BalanceStat, RepetitionStats, LotteryDefinition,
   DelayStats, SumRangeStats, ConsecutiveStats, TrendStats, RepeatBetweenDrawsStats, QuadrantStats,
   ExtendedHistoryAnalysis, ExtendedFilterConfig, CycleStats, HistoryEntry, PrizeInfo,
-  ExtrasDelayStats, ExtrasAdvancedStats
+  ExtrasDelayStats, ExtrasAdvancedStats, ZScoreStats
 } from '../types';
 
 // Cache for Primes to avoid recalculating
@@ -797,6 +797,41 @@ export const analyzeQuadrants = (history: Game[], lottery: LotteryDefinition): Q
   }
   
   return { groups };
+};
+
+// 7. Z-SCORE ANALYSIS (Standard Deviation from Mean)
+export const analyzeZScores = (history: Game[], lottery: LotteryDefinition): ZScoreStats => {
+    const totalGames = history.length;
+    if (totalGames < 2) return { zScores: {} };
+
+    // 1. Calculate Expected Frequency (Probability)
+    // For a fair lottery, p = gameSize / totalNumbers
+    const p = lottery.gameSize / lottery.totalNumbers;
+    
+    // Mean = n * p (where n is number of trials/games)
+    const mean = totalGames * p;
+    
+    // Standard Deviation = sqrt(n * p * (1 - p))
+    const stdDev = Math.sqrt(totalGames * p * (1 - p));
+
+    // 2. Calculate Actual Frequencies & Z-Scores
+    const zScores: Record<number, number> = {};
+    const counts = new Array(lottery.totalNumbers + 1).fill(0);
+
+    history.forEach(game => {
+        game.forEach(num => {
+            if (num <= lottery.totalNumbers) counts[num]++;
+        });
+    });
+
+    for (let num = 1; num <= lottery.totalNumbers; num++) {
+        const actualCount = counts[num];
+        // Z = (X - μ) / σ
+        const z = (actualCount - mean) / stdDev;
+        zScores[num] = Math.round(z * 100) / 100; // Round to 2 decimals
+    }
+
+    return { zScores };
 };
 
 const FIBONACCI_SET = new Set([1, 2, 3, 5, 8, 13, 21, 34, 55, 89]);

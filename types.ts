@@ -321,6 +321,11 @@ export interface QuadrantStats {
   groups: { range: string; expected: number; actual: number }[];
 }
 
+// Estatísticas de Z-Score (Desvio Padrão)
+export interface ZScoreStats {
+  zScores: Record<number, number>; // number -> z-score (std deviations from mean)
+}
+
 // Análise Estendida com todas as novas métricas
 export interface ExtendedHistoryAnalysis extends HistoryAnalysis {
   delayStats: DelayStats[];
@@ -329,6 +334,7 @@ export interface ExtendedHistoryAnalysis extends HistoryAnalysis {
   trendStats: TrendStats;
   repeatBetweenDrawsStats: RepeatBetweenDrawsStats;
   quadrantStats: QuadrantStats;
+  zScoreStats?: ZScoreStats; // Optional for backward compatibility
   cycleStats?: CycleStats;
   
   // Mandel Stats (Opcionais pois dependem da implementação de análise)
