@@ -108,8 +108,14 @@ function App() {
     setExclusionMode(false); // Always reset to standard inclusion mode on lottery change
     setCombinatorialSelection([]); // Clear selection when lottery changes
     setTrevosSelection([]); // Clear trevos selection
+    setCoveringResult(null); // Clear previous results
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentLotteryId]);
+
+  // Clear combinatorial result when selection changes to update estimates
+  useEffect(() => {
+    setCoveringResult(null);
+  }, [combinatorialSelection, trevosSelection, coveringConfig]);
 
   // Auto-configure "Best Static Defaults" when lottery changes
   useEffect(() => {
@@ -821,31 +827,34 @@ function App() {
               </form>
             </div>
 
-            <div className="w-full md:w-auto flex flex-col items-stretch md:items-end">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                2. Quantidade de Jogos
-              </label>
-              <div className="flex items-center bg-gray-50 rounded-xl border border-gray-200 p-1">
-                <button 
-                  onClick={() => setGamesCount(Math.max(1, gamesCount - 1))}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-gray-600 transition-all"
-                >
-                  -
-                </button>
-                <input 
-                  type="number" 
-                  value={gamesCount}
-                  onChange={(e) => setGamesCount(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-16 text-center bg-transparent font-bold text-gray-800 outline-none"
-                />
-                <button 
-                  onClick={() => setGamesCount(gamesCount + 1)}
-                  className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-gray-600 transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+            {/* Only show Quantity Input if NOT in Combinatorial Mode */}
+            {mode !== 'combinatorial' && (
+                <div className="w-full md:w-auto flex flex-col items-stretch md:items-end">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    2. Quantidade de Jogos
+                </label>
+                <div className="flex items-center bg-gray-50 rounded-xl border border-gray-200 p-1">
+                    <button 
+                    onClick={() => setGamesCount(Math.max(1, gamesCount - 1))}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-gray-600 transition-all"
+                    >
+                    -
+                    </button>
+                    <input 
+                    type="number" 
+                    value={gamesCount}
+                    onChange={(e) => setGamesCount(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-16 text-center bg-transparent font-bold text-gray-800 outline-none"
+                    />
+                    <button 
+                    onClick={() => setGamesCount(gamesCount + 1)}
+                    className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-gray-600 transition-all"
+                    >
+                    <Plus className="w-4 h-4" />
+                    </button>
+                </div>
+                </div>
+            )}
           </div>
 
           {/* MODE SELECTOR */}
@@ -941,7 +950,11 @@ function App() {
                 ) : (
                   <>
                     <Play className="w-6 h-6 fill-current" />
-                    Gerar {gamesCount} {gamesCount === 1 ? 'Jogo Otimizado' : 'Jogos Otimizados'}
+                    {mode === 'combinatorial' ? (
+                        <span>Gerar Fechamento {coveringResult ? `(Recalcular)` : ''}</span>
+                    ) : (
+                        <span>Gerar {gamesCount} {gamesCount === 1 ? 'Jogo Otimizado' : 'Jogos Otimizados'}</span>
+                    )}
                   </>
                 )}
               </div>
