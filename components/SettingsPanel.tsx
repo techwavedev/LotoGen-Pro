@@ -1,5 +1,6 @@
 import React from "react";
 import { ExtendedFilterConfig, LotteryDefinition, LOTTERY_MANDEL_RECOMMENDATIONS, ExtendedHistoryAnalysis } from "../types";
+import { useFilterConflicts } from "../hooks/useFilterConflicts";
 import {
   AlertTriangle,
   CheckCircle,
@@ -33,6 +34,9 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
   lottery,
   extendedAnalysis,
 }) => {
+  // Integrate conflict resolution hook
+  useFilterConflicts(config, setConfig, lottery);
+
   const toggle = (key: keyof ExtendedFilterConfig) => {
     setConfig((prev) => ({ ...prev, [key]: !prev[key] }));
   };
@@ -509,15 +513,15 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   const idealHotMin = Math.max(0, Math.floor(lottery.gameSize * 0.4));
                   const idealHotMax = Math.ceil(lottery.gameSize * 0.7);
                   
-                  setConfig(prev => ({
-                    ...prev,
+                  // Setup auto-adjust values
+                  const newSettings: Partial<ExtendedFilterConfig> = {
                     // Hot/Cold
                     minHotNumbers: idealHotMin,
                     maxHotNumbers: idealHotMax,
                     // Sum range
                     useSumFilter: true,
-                    minSum: statDefaults.sum[0] || prev.minSum,
-                    maxSum: statDefaults.sum[1] || prev.maxSum,
+                    minSum: statDefaults.sum[0] || config.minSum,
+                    maxSum: statDefaults.sum[1] || config.maxSum,
                     // Consecutive
                     useConsecutiveFilter: true,
                     maxConsecutivePairs: statDefaults.consecutive,
@@ -533,6 +537,51 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     useInterleavingFilter: true,
                     useTrendFilter: true,
                     minTrendingHot: 3,
+                    
+                    // Mandel - Apply calculated defaults
+                    usePrimeCountFilter: true,
+                    minPrimes: statDefaults.primes.min,
+                    maxPrimes: statDefaults.primes.max,
+                    
+                    useDecadeBalanceFilter: true,
+                    minDecadesRepresented: statDefaults.decades.min,
+                    
+                    useEdgeFilter: true,
+                    minEdgeNumbers: statDefaults.edges.min,
+                    maxEdgeNumbers: statDefaults.edges.max,
+                    
+                    useSpreadFilter: true,
+                    minAverageSpread: statDefaults.spread.min,
+                    
+                    useFibonacciFilter: true,
+                    minFibonacciNumbers: statDefaults.fibonacci.min,
+                  };
+
+                  // Extras / Trevos (+Milionária) Logic
+                  if (lottery.hasExtras && lottery.extrasTotalNumbers) {
+                     // Check if specific recommendations exist in staticRec
+                     const extrasRec = (staticRec as any).extras;
+                     if (extrasRec) {
+                        newSettings.useExtrasHotColdFilter = true;
+                        newSettings.minHotExtras = extrasRec.hotCold.minHot;
+                        newSettings.maxHotExtras = extrasRec.hotCold.maxHot;
+                        
+                        newSettings.useExtrasDelayFilter = true;
+                        newSettings.extrasDelayThreshold = extrasRec.delay.threshold;
+                        newSettings.minDelayedExtras = extrasRec.delay.minDelayed;
+                        
+                        newSettings.useExtrasRepeatFilter = true;
+                        newSettings.minExtrasRepeats = extrasRec.repeat.min;
+                        newSettings.maxExtrasRepeats = extrasRec.repeat.max;
+                        
+                        newSettings.excludeHotExtrasPair = extrasRec.avoidHotPairs;
+                        newSettings.forceBalancedExtras = extrasRec.balance;
+                     }
+                  }
+
+                  setConfig(prev => ({
+                    ...prev,
+                    ...newSettings
                   }));
                 }}
                 className="text-xs font-medium px-3 py-1.5 rounded-lg transition-colors bg-blue-500 hover:bg-blue-600 text-white shadow-sm flex items-center gap-1"
