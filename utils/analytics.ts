@@ -1,23 +1,27 @@
-// Google Analytics 4 Event Tracking Utility
-
-declare global {
-  interface Window {
-    dataLayer: any[];
-    gtag: (...args: any[]) => void;
-  }
-}
+// Google Analytics 4 Event Tracking Utility using react-ga4
+import ReactGA from 'react-ga4';
 
 // Helper to safely send events to GA
 export function trackEvent(eventName: string, params?: Record<string, any>) {
-  if (typeof window !== 'undefined' && window.gtag) {
-    window.gtag('event', eventName, params);
+  try {
+    if (ReactGA.isInitialized) {
+      ReactGA.event(eventName, params);
+    }
+  } catch (e) {
+    console.warn('[Analytics] Failed to track event:', eventName, e);
   }
 }
 
 // ========== PAGE & SESSION EVENTS ==========
 
 export function trackPageView(pageName: string) {
-  trackEvent('page_view', { page_title: pageName });
+  try {
+    if (ReactGA.isInitialized) {
+      ReactGA.send({ hitType: "pageview", page: window.location.pathname + window.location.search, title: pageName });
+    }
+  } catch (e) {
+    console.warn('[Analytics] Failed to track page view', e);
+  }
 }
 
 export function trackSessionStart() {
@@ -28,6 +32,7 @@ export function trackSessionStart() {
 }
 
 // Track Visit for "Observer" (Referral & Abuse Detection)
+// This is separate from GA and sends data to our own backend
 export function trackVisit() {
   const apiUrl = import.meta.env.VITE_API_URL;
   if (!apiUrl) return;

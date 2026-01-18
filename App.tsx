@@ -11,8 +11,10 @@ import BetTypeSelector, { BetType } from './components/BetTypeSelector';
 import StatisticsPanel from './components/StatisticsPanel';
 import FilterExamplesModal from './components/FilterExamplesModal';
 import CookieConsent from './components/CookieConsent';
-import { initializeGA } from './index';
+import { initializeGAAfterConsent } from './hooks/useAnalytics';
 import { useLotteryData } from './hooks/useLotteryData';
+import { useSEO } from './hooks/useSEO';
+
 import clsx from 'clsx';
 import { utils, writeFile } from 'xlsx';
 import UserMenu from './components/UserMenu';
@@ -42,6 +44,37 @@ function App() {
     lottery,
     apiUrl
   });
+
+  // Analytics & SEO hooks
+  const { trackPageView } = useAnalytics();
+  useSEO({ lottery });
+
+  // Init Deep Linking: Read URL param on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gameParam = params.get('game');
+    if (gameParam && LOTTERIES[gameParam as LotteryId]) {
+      setCurrentLotteryId(gameParam as LotteryId);
+    }
+    // Track initial page view with correct parameters
+    const url = new URL(window.location.href);
+    if (gameParam && LOTTERIES[gameParam as LotteryId]) {
+      // If we are redirecting/setting state, tracking will happen in the effect below? 
+      // Actually simpler to just track here or rely on the effect below if it triggers on mount.
+      // But trackPageView is safe to call.
+    }
+  }, []);
+
+  // Update URL and Track PageView when lottery changes
+  useEffect(() => {
+    // Deep Linking: Update URL without reload
+    const url = new URL(window.location.href);
+    url.searchParams.set('game', currentLotteryId);
+    window.history.pushState({}, '', url);
+
+    // Track Virtual Page View
+    trackPageView(window.location.pathname + window.location.search, `LotoGen Pro - ${lottery.name}`);
+  }, [currentLotteryId, lottery.name, trackPageView]);
 
   // Local state for UI operations
   const [generatedGames, setGeneratedGames] = useState<Game[]>([]);
@@ -514,7 +547,7 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900 selection:bg-gray-200">
       <FilterExamplesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-      <CookieConsent onAccept={initializeGA} />
+      <CookieConsent onAccept={initializeGAAfterConsent} />
 
       {/* Full-Screen Loading Overlay */}
       {(isLoading || isDataLoading) && (
