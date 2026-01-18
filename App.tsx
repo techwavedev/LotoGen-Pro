@@ -237,16 +237,36 @@ function App() {
     }
   }, [analysis]);
 
-  // Auto-fetch and load history from asloterias.com.br
+  // Auto-fetch and load history from Caixa API (PRIMARY) or asloterias.com.br (FALLBACK)
   const handleDownloadHistory = async () => {
     setIsLoading(true);
     setError(null);
     setOperationStep('');
     setLoadingMessage(`Buscando resultados da ${lottery.name}...`);
 
-    try {
-      // Try to fetch via a CORS proxy or direct request
-      setOperationStep('Conectando ao servidor de resultados...');
+    // Caixa API fetch function
+    const fetchFromCaixa = async () => {
+      setOperationStep('Conectando à API oficial da Caixa...');
+      const caixaUrl = `https://servicebus2.caixa.gov.br/portaldeloterias/api/resultados/download?modalidade=${encodeURIComponent(lottery.caixaModalidade)}`;
+      
+      const response = await fetch(caixaUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': '*/*',
+          'Origin': 'https://loterias.caixa.gov.br',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Caixa API failed: ${response.status}`);
+      }
+
+      return response;
+    };
+
+    // Fallback: asloterias.com.br  
+    const fetchFromAsLoterias = async () => {
+      setOperationStep('Usando fonte alternativa (sem prémios)...');
       const formData = new URLSearchParams();
       formData.append('l', lottery.downloadParam);
       formData.append('t', 't');
@@ -261,7 +281,22 @@ function App() {
       });
 
       if (!response.ok) {
-        throw new Error('Falha ao buscar resultados');
+        throw new Error('Fallback failed');
+      }
+
+      return response;
+    };
+
+    try {
+      let response: Response;
+      
+      try {
+        // Try Caixa API first (PRIMARY - includes prize data)
+        response = await fetchFromCaixa();
+      } catch (caixaError) {
+        console.warn('Caixa API failed, trying fallback:', caixaError);
+        // Fallback to asloterias.com.br (no prize data)
+        response = await fetchFromAsLoterias();
       }
 
       setOperationStep('Baixando arquivo de resultados...');
@@ -288,11 +323,10 @@ function App() {
       setOperationStep('');
 
     } catch (err: any) {
-      console.error('Auto-fetch failed:', err);
-      // If CORS blocks, fallback to manual download
+      console.error('Download failed:', err);
+      // If both fail, try manual download as last resort
       if (err.message.includes('fetch') || err.message.includes('CORS') || err.name === 'TypeError') {
         setError('Auto-carregamento bloqueado (CORS). Clique novamente para baixar manualmente.');
-        // Fallback: open form in new tab
         if (downloadFormRef.current) {
           downloadFormRef.current.submit();
         }
