@@ -30,4 +30,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+#Skills
+skills/SKILLS.md
 .claude/
+SKILLS.md
+skills/*
+.agent/*
+.claude/
+SKILLS.md
+.claude/*
