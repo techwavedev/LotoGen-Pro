@@ -1,5 +1,5 @@
-import React from 'react';
-import { Clover } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clover, Copy, Check } from 'lucide-react';
 import { Game, LotteryDefinition } from '../types';
 import clsx from 'clsx';
 
@@ -10,6 +10,43 @@ interface GameTicketProps {
 }
 
 const GameTicket: React.FC<GameTicketProps> = ({ game, index, lottery }) => {
+  const [copied, setCopied] = useState(false);
+
+  // Format game for Caixa app - numbers only, padded
+  const formatGameForCaixa = () => {
+    // Main numbers (exclude extras which are > 100)
+    const mainNumbers = game
+      .filter(n => n <= lottery.totalNumbers)
+      .sort((a, b) => a - b)
+      .map(n => n.toString().padStart(2, '0'))
+      .join(' ');
+
+    // Extras (Trevos) for +Milionária
+    if (lottery.hasExtras) {
+      const offset = lottery.extrasOffset || 100;
+      const extras = game
+        .filter(n => n > offset)
+        .map(n => n - offset)
+        .sort((a, b) => a - b)
+        .join(' ');
+      
+      if (extras) {
+        return `${mainNumbers} | ${lottery.extrasName || 'Trevos'}: ${extras}`;
+      }
+    }
+    
+    return mainNumbers;
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(formatGameForCaixa());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
   // Generate numbers based on lottery total
   const allNumbers = Array.from({ length: lottery.totalNumbers }, (_, i) => i + 1);
   
@@ -33,12 +70,27 @@ const GameTicket: React.FC<GameTicketProps> = ({ game, index, lottery }) => {
            </span>
            Palpite
         </h3>
-        <span 
-            className="text-[10px] text-white px-2 py-1 rounded-full font-bold uppercase tracking-wider"
-            style={{ backgroundColor: lottery.color }}
-        >
-          {lottery.gameSize} Dezenas
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleCopy}
+            className={clsx(
+              "p-1.5 rounded-lg transition-all text-xs flex items-center gap-1",
+              copied 
+                ? "bg-green-100 text-green-600" 
+                : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700"
+            )}
+            title="Copiar para usar no app Caixa"
+          >
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{copied ? 'Copiado!' : 'Copiar'}</span>
+          </button>
+          <span 
+              className="text-[10px] text-white px-2 py-1 rounded-full font-bold uppercase tracking-wider"
+              style={{ backgroundColor: lottery.color }}
+          >
+            {lottery.gameSize} Dezenas
+          </span>
+        </div>
       </div>
       
       <div 

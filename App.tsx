@@ -1178,6 +1178,24 @@ function App() {
           </div>
         )}
       </main>
+
+      {/* Footer com Aviso Legal */}
+      <footer className="bg-gray-100 border-t border-gray-200 mt-12 py-8 px-4">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center">
+            <h4 className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">Aviso Legal</h4>
+            <p className="text-xs text-gray-500 leading-relaxed max-w-3xl mx-auto">
+              <strong>Isenção de Responsabilidade:</strong> O LotoGen Pro é uma ferramenta de auxílio à geração de jogos lotéricos e não nos responsabilizamos por quaisquer erros ou inconsistências nas apostas geradas pelo aplicativo. 
+              Não garantimos o perfeito funcionamento do sistema em todas as circunstâncias, dispositivos ou navegadores. 
+              <strong> Não garantimos a obtenção de prêmios de qualquer espécie.</strong> Os jogos gerados são baseados em análises estatísticas e padrões históricos, mas as loterias são jogos de azar com resultados completamente aleatórios. 
+              Jogue com responsabilidade.
+            </p>
+            <p className="text-xs text-gray-400 mt-4">
+              © {new Date().getFullYear()} LotoGen Pro. Todos os direitos reservados.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
