@@ -135,16 +135,19 @@ const BetTypeSelector: React.FC<BetTypeSelectorProps> = ({
                };
                
                const combos = combinations(selectedGameSize, lottery.gameSize);
-               const totalCost = combos * (lottery.basePrice || 0);
+               const costPerGame = combos * (lottery.basePrice || 0);
+               const totalCost = costPerGame * gamesCount;
 
                return (
                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
                         <div className="flex-1">
-                            <span className="text-xs text-gray-500 uppercase font-bold">Equivalente a</span>
+                            <span className="text-xs text-gray-500 uppercase font-bold">Por Jogo</span>
                             <div className="font-bold text-gray-800">{combos} apostas simples</div>
                         </div>
                         <div className="flex-1 border-l pl-3 border-gray-200">
-                             <span className="text-xs text-gray-500 uppercase font-bold">Custo Estimado</span>
+                             <span className="text-xs text-gray-500 uppercase font-bold">
+                               Total ({gamesCount} {gamesCount === 1 ? 'jogo' : 'jogos'})
+                             </span>
                              <div className="font-bold text-green-600 text-lg">
                                 {totalCost.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                              </div>

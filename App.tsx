@@ -1006,6 +1006,7 @@ function App() {
                     lottery={lottery}
                     selectedGameSize={selectedGameSize}
                     onGameSizeChange={setSelectedGameSize}
+                    gamesCount={gamesCount}
                 />
 
                 {/* Settings Section (Hidden for Surpresinha?) */}
