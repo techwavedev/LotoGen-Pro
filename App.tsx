@@ -11,7 +11,7 @@ import BetTypeSelector, { BetType } from './components/BetTypeSelector';
 import StatisticsPanel from './components/StatisticsPanel';
 import FilterExamplesModal from './components/FilterExamplesModal';
 import CookieConsent from './components/CookieConsent';
-import { initializeGAAfterConsent } from './hooks/useAnalytics';
+import { initializeGAAfterConsent, useAnalytics } from './hooks/useAnalytics';
 import { useLotteryData } from './hooks/useLotteryData';
 import { useSEO } from './hooks/useSEO';
 
@@ -1030,6 +1030,44 @@ function App() {
              <>
                 {/* Statistics Summary (if loaded) */}
                 <StatisticsPanel analysis={analysis} lottery={lottery} />
+                
+                {/* Prize Display Card - Show last draw jackpot */}
+                {history.length > 0 && (() => {
+                  const lastDraw = history[history.length - 1];
+                  const jackpot = lastDraw.prizes?.find(p => p.tier === 1);
+                  const hasWinners = jackpot && jackpot.winners > 0;
+                  
+                  if (!jackpot) return null;
+                  
+                  return (
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 mb-4 shadow-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-amber-100 rounded-lg">
+                            <span className="text-2xl">🏆</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-amber-600 font-medium uppercase tracking-wide">
+                              Último Sorteio #{lastDraw.drawNumber || '?'}
+                              {lastDraw.date && <span className="ml-2 text-amber-500">({lastDraw.date})</span>}
+                            </p>
+                            <p className="text-lg font-bold text-amber-900">
+                              {hasWinners 
+                                ? `${jackpot.winners} ${jackpot.winners === 1 ? 'Ganhador' : 'Ganhadores'} - ${jackpot.prizeValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+                                : 'Não houve ganhadores'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        {lastDraw.accumulated && (
+                          <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-bold animate-pulse">
+                            🔥 Acumulou!
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
       
                 {/* Bet Type Selector */}
                 <BetTypeSelector 
