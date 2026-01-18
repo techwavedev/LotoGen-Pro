@@ -15,7 +15,8 @@ export interface LotteryDefinition {
   visualCols?: number; // Colunas VISUAIS (para o layout do app, geralmente 5 em mobile)
   color: string; // Hex color for UI
   colorName: string; // Tailwind color name approx
-  downloadParam: string; // Parameter for asloterias.com.br download (l=XX)
+  downloadParam: string; // Parameter for asloterias.com.br download (l=XX) - FALLBACK ONLY
+  caixaModalidade: string; // Modalidade name for Caixa API (PRIMARY SOURCE)
   basePrice: number; // Preço da aposta mínima (R$)
   // Initial support for "Extras" (Trevos)
   hasExtras?: boolean;
