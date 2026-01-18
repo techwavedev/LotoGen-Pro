@@ -27,6 +27,8 @@ interface CombinatorialPanelProps {
   // Trevos Support
   trevosSelection?: number[];
   setTrevosSelection?: (numbers: number[]) => void;
+  // Optional callback for parent reset
+  onClearAll?: () => void;
 }
 
 const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({ 
@@ -475,29 +477,6 @@ const CombinatorialPanel: React.FC<CombinatorialPanelProps> = ({
                         </div>
                     )}
                </div>
-            {/* Smart Selection Presets (Mandel's Condensation) */}
-            <div className="flex flex-wrap gap-2 mb-4 justify-center">
-                <button
-                    onClick={() => {
-                        if (!analysis || !compositeScores) return;
-                        // Select top N numbers based on Z-Score/Composite
-                        const topNumbers = Object.entries(compositeScores)
-                            .sort(([, a], [, b]) => b.score - a.score)
-                            .slice(0, 15) // Pick top 15 (classic Mandel pool)
-                            .map(([num]) => parseInt(num))
-                            .sort((a,b) => a-b);
-                        setSelection(topNumbers);
-                        setExclusionMode(false);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 rounded-lg text-xs font-semibold hover:shadow-md transition-all border border-amber-300"
-                    title="Aplica a técnica de Condensação de Mandel: Seleciona os 15 números com maior Z-Score (Desvio Padrão positivo)"
-                >
-                    <Zap className="w-3.5 h-3.5" />
-                    Condensação Mandel (Top 15 Z-Score)
-                </button>
-            </div>
-
-           </div>
 
            {/* Number Grid */}
            <div 
