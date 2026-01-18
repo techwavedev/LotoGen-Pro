@@ -11,6 +11,7 @@ interface BetTypeSelectorProps {
   lottery: LotteryDefinition;
   selectedGameSize: number;
   onGameSizeChange: (size: number) => void;
+  gamesCount?: number; // Number of games to generate (for total cost)
 }
 
 const INFO_CONTENT = {
@@ -45,7 +46,8 @@ const BetTypeSelector: React.FC<BetTypeSelectorProps> = ({
   onTypeChange, 
   lottery,
   selectedGameSize,
-  onGameSizeChange
+  onGameSizeChange,
+  gamesCount = 1
 }) => {
   const [modalInfo, setModalInfo] = useState<keyof typeof INFO_CONTENT | null>(null);
 
