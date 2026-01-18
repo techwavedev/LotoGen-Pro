@@ -15,6 +15,10 @@ import { initializeGA } from './index';
 import { useLotteryData } from './hooks/useLotteryData';
 import clsx from 'clsx';
 import { utils, writeFile } from 'xlsx';
+import UserMenu from './components/UserMenu';
+import UserDashboard from './components/UserDashboard';
+import { useAuth } from './hooks/AuthContext';
+import { BookmarkPlus, BookmarkCheck } from 'lucide-react';
 
 function App() {
   const [currentLotteryId, setCurrentLotteryId] = useState<LotteryId>('lotofacil');
@@ -53,7 +57,20 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [winnersCount, setWinnersCount] = useState<number>(0);
   const [coveringConfig, setCoveringConfig] = useState<CoveringDesignConfig>(DEFAULT_COVERING_CONFIG);
+  const [coveringConfig, setCoveringConfig] = useState<CoveringDesignConfig>(DEFAULT_COVERING_CONFIG);
   const [coveringResult, setCoveringResult] = useState<CoveringDesignResult | null>(null);
+
+  // User Dashboard State
+  const [showDashboard, setShowDashboard] = useState(false);
+  const { isAuthenticated, token } = useAuth();
+  const [saveSuccess, setSaveSuccess] = useState<number | null>(null);
+
+  // Listen for dashboard open event from UserMenu
+  useEffect(() => {
+    const handleOpenDashboard = () => setShowDashboard(true);
+    window.addEventListener('open-dashboard', handleOpenDashboard);
+    return () => window.removeEventListener('open-dashboard', handleOpenDashboard);
+  }, []);
 
   // Progress tracking for long operations
   const [operationProgress, setOperationProgress] = useState(0);
@@ -459,6 +476,41 @@ function App() {
     alert('Jogos copiados para a área de transferência!');
   };
 
+  const handleSaveGames = async () => {
+    if (!isAuthenticated) {
+      alert('Faça login para salvar seus jogos!');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setLoadingMessage('Salvando jogos...');
+      
+      const response = await fetch(`${apiUrl}/api/user/games`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          lottery_type: currentLotteryId,
+          numbers: generatedGames,
+          note: `Gerado em ${new Date().toLocaleString()}`
+        })
+      });
+
+      if (!response.ok) throw new Error('Erro ao salvar');
+      
+      setSaveSuccess(Date.now());
+      setTimeout(() => setSaveSuccess(null), 3000);
+      
+    } catch (err: any) {
+      setError('Falha ao salvar jogos: ' + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 font-sans text-gray-900 selection:bg-gray-200">
       <FilterExamplesModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
@@ -565,14 +617,18 @@ function App() {
               <p className="text-white/80 text-sm md:text-base font-medium max-w-md">
                 Algoritmos avançados para geração de jogos da {lottery.name} baseados em padrões históricos e matemáticos.
               </p>
-              {winnersCount > 0 && (
-                <div className="mt-3 inline-flex items-center gap-2 bg-green-500/20 border border-green-400/30 text-green-100 px-4 py-2 rounded-lg backdrop-blur-sm">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="text-sm font-semibold">
-                    Já geramos {winnersCount.toLocaleString()} combinações vencedoras desde 2026!
-                  </span>
-                </div>
-              )}
+              
+              <div className="flex flex-wrap gap-3 mt-4">
+                 <UserMenu />
+                 {winnersCount > 0 && (
+                  <div className="inline-flex items-center gap-2 bg-green-500/20 border border-green-400/30 text-green-100 px-4 py-2 rounded-lg backdrop-blur-sm">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="text-sm font-semibold">
+                      {winnersCount.toLocaleString()} vencedores!
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Lottery Selector Tabs */}
@@ -599,6 +655,21 @@ function App() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 -mt-8">
+        
+        {/* User Dashboard Overlay */}
+        {showDashboard && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+            <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto relative animate-scale-in">
+               <button 
+                  onClick={() => setShowDashboard(false)}
+                  className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+               <UserDashboard />
+            </div>
+          </div>
+        )}
         
         {/* Beta Testing Banner for New Lotteries */}
         {['duplasena', 'timemania', 'diadesorte'].includes(currentLotteryId) && (
@@ -1006,22 +1077,35 @@ function App() {
               {!showResultsSkeleton && (
                 <div className="flex gap-2">
                   <button
-                    onClick={copyToClipboard}
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm shadow-sm"
-                  >
-                    <Copy className="w-4 h-4" />
-                    Copiar
-                  </button>
+                  onClick={copyToClipboard}
+                  className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-bold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  <Copy className="w-5 h-5" />
+                  Copiar
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-bold rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  <Download className="w-5 h-5" />
+                  Excel
+                </button>
+                
+                {isAuthenticated && (
                   <button
-                    onClick={handleDownload}
-                    className="flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-opacity font-medium text-sm shadow-sm hover:opacity-90"
-                    style={{ backgroundColor: lottery.color }}
+                    onClick={handleSaveGames}
+                    disabled={!!saveSuccess}
+                    className={`
+                      flex items-center gap-2 px-6 py-3 font-bold rounded-xl shadow-lg transition-all text-white
+                      ${saveSuccess ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-900 hover:bg-gray-800'}
+                    `}
+                    style={{ backgroundColor: saveSuccess ? undefined : lottery.color }}
                   >
-                    <Download className="w-4 h-4" />
-                    Excel
+                    {saveSuccess ? <BookmarkCheck className="w-5 h-5" /> : <BookmarkPlus className="w-5 h-5" />}
+                    {saveSuccess ? 'Salvo!' : 'Salvar Jogos'}
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Skeleton Loader */}
