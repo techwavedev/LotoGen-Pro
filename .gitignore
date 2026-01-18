@@ -40,3 +40,4 @@ skills/*
 .claude/
 SKILLS.md
 .claude/*
+.agent/ 
