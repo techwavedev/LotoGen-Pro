@@ -233,6 +233,62 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         </div>
       )}
 
+      {/* Otimizar Tudo Button - Prominent at Top */}
+      <button
+        onClick={() => {
+          const idealHotMin = Math.max(0, Math.floor(lottery.gameSize * 0.4));
+          const idealHotMax = Math.ceil(lottery.gameSize * 0.7);
+          
+          setConfig(prev => ({
+            ...prev,
+            // Hot/Cold
+            useHotColdFilter: true,
+            minHotNumbers: idealHotMin,
+            maxHotNumbers: idealHotMax,
+            // Sum range
+            useSumFilter: true,
+            minSum: statDefaults.sum[0] || prev.minSum,
+            maxSum: statDefaults.sum[1] || prev.maxSum,
+            // Consecutive
+            useConsecutiveFilter: true,
+            maxConsecutivePairs: statDefaults.consecutive,
+            // Delay
+            useDelayFilter: true,
+            minDelayedNumbers: 2,
+            delayThreshold: statDefaults.delay,
+            // Repeat
+            useRepeatFilter: true,
+            minRepeatsFromLast: statDefaults.repeat[0],
+            maxRepeatsFromLast: statDefaults.repeat[1],
+            // Interleaving & Trend
+            useInterleavingFilter: true,
+            useTrendFilter: true,
+            minTrendingHot: 3,
+            // Cycle - Force cycle completion
+            useCycleFilter: true,
+            // Mandel
+            usePrimeCountFilter: true,
+            minPrimes: statDefaults.primes.min,
+            maxPrimes: statDefaults.primes.max,
+            useDecadeBalanceFilter: true,
+            minDecadesRepresented: statDefaults.decades.min,
+            useEdgeFilter: true,
+            minEdgeNumbers: statDefaults.edges.min,
+            maxEdgeNumbers: statDefaults.edges.max,
+            useSpreadFilter: true,
+            minAverageSpread: statDefaults.spread.min,
+            useFibonacciFilter: true,
+            minFibonacciNumbers: statDefaults.fibonacci.min,
+          }));
+        }}
+        className="w-full mb-4 py-3 px-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold rounded-xl shadow-md hover:from-green-600 hover:to-emerald-700 transition-all flex items-center justify-center gap-2"
+        title="Aplica todas as configurações recomendadas baseadas no histórico, incluindo fechamento de ciclo"
+      >
+        <CheckCircle className="w-5 h-5" />
+        Otimizar Tudo (Recomendado)
+        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">+ Forçar Ciclo</span>
+      </button>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Historical Filters */}
         <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
