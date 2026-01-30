@@ -402,14 +402,62 @@ export function generateBalancedWheel(
   const selectedGames: Game[] = [];
   const usedKeys = new Set<string>();
   
+  // v2.0: Track de trincas (3-subsets) para melhor cobertura
+  const tripleCount = new Map<string, number>();
+  
+  function getTripleKey(a: number, b: number, c: number): string {
+    return [a, b, c].sort((x, y) => x - y).join(',');
+  }
+  
+  function getGameScoreV2(game: number[]): number {
+    // Score combina pares pouco usados + trincas pouco usadas
+    let pairScore = 0;
+    let tripleScore = 0;
+    
+    for (let i = 0; i < game.length; i++) {
+      for (let j = i + 1; j < game.length; j++) {
+        const pairKey = getPairKey(game[i], game[j]);
+        const pairUsage = pairCount.get(pairKey) || 0;
+        pairScore += 1 / (pairUsage + 1);
+        
+        // Adicionar score de trincas
+        for (let k = j + 1; k < game.length; k++) {
+          const tripleKey = getTripleKey(game[i], game[j], game[k]);
+          const tripleUsage = tripleCount.get(tripleKey) || 0;
+          tripleScore += 1 / (tripleUsage + 1);
+        }
+      }
+    }
+    
+    // Peso maior para trincas em loterias de baixa densidade
+    return pairScore + tripleScore * 2;
+  }
+  
+  function updateCounts(game: number[]) {
+    updatePairCounts(game);
+    // Atualizar trincas
+    for (let i = 0; i < game.length; i++) {
+      for (let j = i + 1; j < game.length; j++) {
+        for (let k = j + 1; k < game.length; k++) {
+          const key = getTripleKey(game[i], game[j], game[k]);
+          tripleCount.set(key, (tripleCount.get(key) || 0) + 1);
+        }
+      }
+    }
+  }
+  
+  // v2.0: Amostragem adaptativa baseada no tamanho do pool
+  const baseSampleSize = Math.min(allGames.length, 2000);
+  
   // Selecionar jogos balanceados
   for (let i = 0; i < targetGames && allGames.length > 0; i++) {
     let bestGame: Game | null = null;
     let bestScore = -1;
-    let bestIdx = -1;
     
-    // Amostragem para performance (não verificar todos se muitos)
-    const sampleSize = Math.min(allGames.length, 1000);
+    // Aumentar amostragem para os primeiros jogos (mais importantes)
+    const progressFactor = 1 - (i / targetGames);
+    const sampleSize = Math.min(allGames.length, Math.ceil(baseSampleSize * (0.5 + progressFactor * 0.5)));
+    
     const indices = new Set<number>();
     while (indices.size < sampleSize) {
       indices.add(Math.floor(Math.random() * allGames.length));
@@ -421,18 +469,17 @@ export function generateBalancedWheel(
       
       if (usedKeys.has(key)) continue;
       
-      const score = getGameScore(game);
+      const score = getGameScoreV2(game);
       if (score > bestScore) {
         bestGame = game;
         bestScore = score;
-        bestIdx = idx;
       }
     }
     
     if (bestGame) {
       selectedGames.push(bestGame.sort((a, b) => a - b));
       usedKeys.add(subsetKey(bestGame));
-      updatePairCounts(bestGame);
+      updateCounts(bestGame);
     }
   }
   
@@ -461,8 +508,58 @@ export function generateBalancedWheel(
 // ============ MAIN EXPORT ============
 
 /**
+ * Calcula a densidade de uma loteria (gameSize / drawSize)
+ * Mega-Sena: 6/60 = 0.1 (baixa densidade - precisa mais jogos)
+ * Lotofácil: 15/25 = 0.6 (alta densidade - precisa menos jogos)
+ */
+function getLotteryDensity(lottery: LotteryDefinition): number {
+  return lottery.gameSize / lottery.drawSize;
+}
+
+/**
+ * Calcula o número ideal de jogos para o modo balanceado
+ * baseado nas características da loteria.
+ */
+function calculateOptimalBalancedGames(
+  poolSize: number,
+  lottery: LotteryDefinition
+): number {
+  const density = getLotteryDensity(lottery);
+  const fullCount = binomial(poolSize, lottery.gameSize);
+  
+  // Para loterias de baixa densidade (Mega-Sena, Quina, etc.)
+  // precisamos de mais jogos para boa cobertura
+  if (density <= 0.15) {
+    // Mega-Sena: usar 70% do fechamento ou max 500 jogos
+    const target = Math.ceil(fullCount * 0.7);
+    return Math.min(500, Math.max(50, target));
+  }
+  
+  if (density <= 0.3) {
+    // Densidade média-baixa: 60% do fechamento ou max 400 jogos
+    const target = Math.ceil(fullCount * 0.6);
+    return Math.min(400, Math.max(40, target));
+  }
+  
+  if (density <= 0.5) {
+    // Densidade média: 50% do fechamento ou max 300 jogos
+    const target = Math.ceil(fullCount * 0.5);
+    return Math.min(300, Math.max(30, target));
+  }
+  
+  // Alta densidade (Lotofácil): 40% do fechamento ou max 200 jogos
+  const target = Math.ceil(fullCount * 0.4);
+  return Math.min(200, Math.max(20, target));
+}
+
+/**
  * Função principal que escolhe e executa o algoritmo correto
  * baseado na configuração do usuário.
+ * 
+ * MELHORIAS v2.0:
+ * - Cálculo adaptativo de jogos baseado na densidade da loteria
+ * - Mega-Sena (baixa densidade) agora usa mais jogos para melhor cobertura
+ * - Lotofácil (alta densidade) usa menos jogos pois não precisa tanto
  */
 export function generateCoveringDesign(
   pool: number[],
@@ -477,9 +574,8 @@ export function generateCoveringDesign(
       return generateAbbreviatedWheel(pool, lottery, config);
     
     case 'balanced':
-      // Para balanceado, usamos ~50% do fechamento total ou 200 jogos, o que for menor
-      const fullCount = binomial(pool.length, lottery.gameSize);
-      const targetGames = Math.min(200, Math.ceil(fullCount * 0.5));
+      // v2.0: Cálculo adaptativo baseado na densidade da loteria
+      const targetGames = calculateOptimalBalancedGames(pool.length, lottery);
       return generateBalancedWheel(pool, lottery, targetGames);
     
     default:
