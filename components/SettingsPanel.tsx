@@ -99,68 +99,217 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       };
     }
     
-    // Use actual historical analysis data
-    // CRITICAL: Scale stats if gameSize > drawSize (e.g. Lotomania)
-    const scaleRatio = lottery.gameSize / (lottery.drawSize || lottery.gameSize);
+    // ============ LOTTERY-SPECIFIC LOGIC ============
+    // Each lottery has very different characteristics, so we need specific logic
     
-    // Primes - add buffer to make less restrictive
-    const hPrimes = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
-    const primeMin = Math.max(1, Math.floor(hPrimes[0] * scaleRatio) - 1); // -1 for flexibility
-    const primeMax = Math.ceil(hPrimes[1] * scaleRatio) + 2; // +2 for flexibility
-
-    // Edges - add buffer to make less restrictive
-    const hEdges = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
-    const edgeMin = Math.max(2, Math.floor(hEdges[0] * scaleRatio) - 2); // -2 for flexibility
-    const edgeMax = Math.ceil(hEdges[1] * scaleRatio) + 2; // +2 for flexibility
-
-    // Decades (Coverage tends to saturate, so don't scale linearly beyond total decades)
-    const hDecadeAvg = extendedAnalysis.decadeDistributionStats?.avgDecadesCovered || staticRec.decades.min;
-    // For Lotomania (50 picks), you almost always pick more decades than history (20 picks).
-    // If history covers 8 decades (avg), 50 picks likely covers 10.
-    // Heuristic: if scale > 1.5, assume near full coverage is safe.
-    const decadeMin = scaleRatio > 1.5 ? Math.min(10, Math.floor(hDecadeAvg + 2)) : Math.floor(hDecadeAvg);
-
-    // Spread (Avg distance decreases as you pick more numbers!)
-    // If you pick 2.5x more numbers, the gap between them shrinks by 2.5x.
-    const hSpreadAvg = extendedAnalysis.spreadStats?.recommendedMinSpread || staticRec.spread.min;
-    const spreadMin = Math.max(0.5, hSpreadAvg / scaleRatio);
-
-    // Fibonacci
-    const hFib = extendedAnalysis.fibonacciStats?.recommendedRange || [staticRec.fibonacci.min, staticRec.fibonacci.min + 2];
-    const fibMin = Math.floor(hFib[0] * scaleRatio);
-
-    // Stats - widen sum range for more flexibility
-    const sumAvgHist = extendedAnalysis.sumStats?.averageSum || expectedSum;
-    const sumAvgScaled = sumAvgHist * scaleRatio;
-    const sumMin = Math.floor(sumAvgScaled * 0.75); // Was 0.85, now 0.75 for more flexibility
-    const sumMax = Math.ceil(sumAvgScaled * 1.25); // Was 1.15, now 1.25 for more flexibility
-    
-    // Consecutive
+    // Get historical averages (may be undefined)
+    const avgPrimes = extendedAnalysis.primeDistributionStats?.avgPrimesPerGame;
+    const avgEdges = extendedAnalysis.edgeNumberStats?.avgEdgesPerGame;
+    const avgFib = extendedAnalysis.fibonacciStats?.avgFibonacciPerGame;
+    const avgDecades = extendedAnalysis.decadeDistributionStats?.avgDecadesCovered;
+    const avgSpread = extendedAnalysis.spreadStats?.avgSpread;
     const avgConsecutive = extendedAnalysis.consecutiveStats?.avgPairs || 0;
-    // Pairs increase roughly linearly or quadratically?
-    // Lotomania: 20 picks has few pairs. 50 picks has MANY.
-    // Let's rely on the safeConsecutive heuristic if scale is large.
-    const histConsecutiveScaled = Math.ceil(avgConsecutive * scaleRatio * scaleRatio); // Pairs scale quadratically approx
-    // For high density lotteries (Lotofacil/Lotomania), always prefer the wider safe limit to avoid blocking generation
-    const finalConsecutive = (scaleRatio > 1.5 || isHighDensity) ? safeConsecutive : (histConsecutiveScaled > 0 ? histConsecutiveScaled + 2 : safeConsecutive);
-
-    // Historical Delay (applies to individual numbers, doesn't scale with game size)
     const avgDelay = extendedAnalysis.delayStats?.[0]?.avgDelay || 8;
-    const safeDelay = Math.floor(avgDelay * 0.8);
-
-    // Historical Repeats (Comparison with previous draw)
-    // If matching against a previous draw of 20, and we have 50 numbers...
-    // Expected intersection is higher.
     const avgRepeats = extendedAnalysis.repeatBetweenDrawsStats?.avgRepeats || 0;
-    const avgRepeatsScaled = avgRepeats * scaleRatio;
+    const sumAvgHist = extendedAnalysis.sumStats?.averageSum || expectedSum;
     
-    const minRep = Math.max(0, Math.floor(avgRepeatsScaled - 2));
-    const maxRep = Math.ceil(avgRepeatsScaled + 3);
+    let primeMin: number, primeMax: number;
+    let edgeMin: number, edgeMax: number;
+    let decadeMin: number;
+    let spreadMin: number;
+    let fibMin: number;
+    let sumMin: number, sumMax: number;
+    let finalConsecutive: number;
+    let minRep: number, maxRep: number;
+    let safeDelay: number;
+    
+    // ============ MEGA-SENA: 6 números de 60 (10% densidade) ============
+    if (lottery.id === 'megasena') {
+      // Mega-Sena: 6 números, muito espaço para variação natural
+      // PRIMOS: Média histórica ~1.7, permitir 0 a 4 para máxima flexibilidade
+      primeMin = 0; // Jogos sem primos acontecem (~10% das vezes)
+      primeMax = avgPrimes !== undefined ? Math.ceil(avgPrimes) + 2 : 4; // avg + 2
+      
+      // BORDAS: Média histórica ~2.8, permitir 1 a 5
+      edgeMin = 1; // Mínimo 1 número de borda é comum
+      edgeMax = avgEdges !== undefined ? Math.ceil(avgEdges) + 2 : 5; // avg + 2
+      
+      // DÉCADAS: Com 6 números de 60, cobrir 3-5 décadas é normal
+      decadeMin = avgDecades !== undefined ? Math.max(3, Math.floor(avgDecades) - 1) : 3;
+      
+      // SPREAD: Com poucos números, spread alto é esperado
+      spreadMin = avgSpread !== undefined ? Math.max(4, Math.floor(avgSpread * 0.6)) : 5;
+      
+      // FIBONACCI: Média ~1.7, mas 0 é aceitável (jogos sem fibonacci acontecem)
+      fibMin = 0; // Ser flexível aqui - muitos jogos vencedores não têm fibonacci
+      
+      // SOMA: Média ~183 para Mega-Sena, permitir ±30%
+      sumMin = Math.floor(sumAvgHist * 0.70);
+      sumMax = Math.ceil(sumAvgHist * 1.30);
+      
+      // CONSECUTIVOS: Raramente mais que 1 par em 6 números
+      finalConsecutive = 2; // Máximo 2 pares consecutivos
+      
+      // REPETIÇÕES: Média ~0.6 do sorteio anterior
+      minRep = 0;
+      maxRep = Math.ceil(avgRepeats) + 2;
+      
+      safeDelay = Math.max(5, Math.floor(avgDelay * 0.7));
+    }
+    
+    // ============ LOTOFÁCIL: 15 números de 25 (60% densidade) ============
+    // MANTÉM LÓGICA ATUAL - está a funcionar bem!
+    else if (lottery.id === 'lotofacil') {
+      // A Lotofácil está a gerar bons resultados, manter lógica existente
+      const hPrimes = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
+      primeMin = avgPrimes !== undefined ? Math.max(2, Math.floor(avgPrimes) - 1) : hPrimes[0];
+      primeMax = avgPrimes !== undefined ? Math.ceil(avgPrimes) + 1 : hPrimes[1];
+      
+      const hEdges = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
+      edgeMin = avgEdges !== undefined ? Math.max(4, Math.floor(avgEdges) - 2) : hEdges[0];
+      edgeMax = avgEdges !== undefined ? Math.ceil(avgEdges) + 2 : hEdges[1];
+      
+      decadeMin = avgDecades !== undefined ? Math.floor(avgDecades) : staticRec.decades.min;
+      spreadMin = avgSpread !== undefined ? Math.max(0.5, avgSpread * 0.7) : staticRec.spread.min;
+      fibMin = avgFib !== undefined ? Math.max(0, Math.floor(avgFib) - 1) : staticRec.fibonacci.min;
+      
+      sumMin = Math.floor(sumAvgHist * 0.85);
+      sumMax = Math.ceil(sumAvgHist * 1.15);
+      
+      finalConsecutive = safeConsecutive; // Alta densidade = muitos consecutivos naturais
+      
+      minRep = Math.max(0, Math.floor(avgRepeats) - 2);
+      maxRep = Math.ceil(avgRepeats) + 3;
+      
+      safeDelay = Math.max(3, Math.floor(avgDelay * 0.8));
+    }
+    
+    // ============ QUINA: 5 números de 80 (6.25% densidade) ============
+    else if (lottery.id === 'quina') {
+      // Similar à Mega-Sena mas com menos números
+      primeMin = 0;
+      primeMax = avgPrimes !== undefined ? Math.ceil(avgPrimes) + 1 : 3;
+      
+      edgeMin = 0;
+      edgeMax = avgEdges !== undefined ? Math.ceil(avgEdges) + 2 : 4;
+      
+      decadeMin = avgDecades !== undefined ? Math.max(2, Math.floor(avgDecades) - 1) : 3;
+      spreadMin = avgSpread !== undefined ? Math.max(4, Math.floor(avgSpread * 0.5)) : 4;
+      fibMin = 0;
+      
+      sumMin = Math.floor(sumAvgHist * 0.70);
+      sumMax = Math.ceil(sumAvgHist * 1.30);
+      
+      finalConsecutive = 2;
+      
+      minRep = 0;
+      maxRep = Math.ceil(avgRepeats) + 2;
+      
+      safeDelay = Math.max(5, Math.floor(avgDelay * 0.7));
+    }
+    
+    // ============ DUPLA SENA: 6 números de 50 (12% densidade) ============
+    else if (lottery.id === 'duplasena') {
+      // Similar à Mega-Sena
+      primeMin = 0;
+      primeMax = avgPrimes !== undefined ? Math.ceil(avgPrimes) + 2 : 4;
+      
+      edgeMin = 1;
+      edgeMax = avgEdges !== undefined ? Math.ceil(avgEdges) + 2 : 5;
+      
+      decadeMin = avgDecades !== undefined ? Math.max(3, Math.floor(avgDecades) - 1) : 3;
+      spreadMin = avgSpread !== undefined ? Math.max(3, Math.floor(avgSpread * 0.6)) : 4;
+      fibMin = 0;
+      
+      sumMin = Math.floor(sumAvgHist * 0.70);
+      sumMax = Math.ceil(sumAvgHist * 1.30);
+      
+      finalConsecutive = 2;
+      
+      minRep = 0;
+      maxRep = Math.ceil(avgRepeats) + 2;
+      
+      safeDelay = Math.max(5, Math.floor(avgDelay * 0.7));
+    }
+    
+    // ============ LOTOMANIA: 50 números de 100 (50% densidade) ============
+    else if (lottery.id === 'lotomania') {
+      // Alta densidade, escala diferente - usa scaleRatio
+      const scaleRatio = lottery.gameSize / lottery.drawSize; // 50/20 = 2.5
+      
+      const hPrimes = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
+      primeMin = Math.max(8, Math.floor(hPrimes[0] * scaleRatio));
+      primeMax = Math.ceil(hPrimes[1] * scaleRatio) + 3;
+      
+      const hEdges = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
+      edgeMin = Math.max(10, Math.floor(hEdges[0] * scaleRatio));
+      edgeMax = Math.min(30, Math.ceil(hEdges[1] * scaleRatio) + 5);
+      
+      decadeMin = Math.min(10, Math.floor((avgDecades || 8) + 2)); // Quase sempre 10 décadas
+      spreadMin = 0.5; // Números muito próximos são inevitáveis
+      fibMin = Math.floor((avgFib || 3) * scaleRatio);
+      
+      sumMin = Math.floor(sumAvgHist * scaleRatio * 0.85);
+      sumMax = Math.ceil(sumAvgHist * scaleRatio * 1.15);
+      
+      finalConsecutive = lottery.gameSize - 1; // Quase tudo é aceitável
+      
+      const avgRepeatsScaled = avgRepeats * scaleRatio;
+      minRep = Math.max(0, Math.floor(avgRepeatsScaled - 3));
+      maxRep = Math.ceil(avgRepeatsScaled + 5);
+      
+      safeDelay = Math.max(3, Math.floor(avgDelay * 0.5));
+    }
+    
+    // ============ OUTRAS LOTERIAS: Timemania, Dia de Sorte, +Milionária ============
+    else {
+      // Lógica genérica baseada em densidade
+      const density = lottery.gameSize / lottery.totalNumbers;
+      const scaleRatio = lottery.gameSize / (lottery.drawSize || lottery.gameSize);
+      
+      if (density < 0.15) {
+        // Baixa densidade (similar a Mega-Sena)
+        primeMin = 0;
+        primeMax = avgPrimes !== undefined ? Math.ceil(avgPrimes) + 2 : staticRec.primes.max;
+        edgeMin = 0;
+        edgeMax = avgEdges !== undefined ? Math.ceil(avgEdges) + 2 : staticRec.edges.max;
+        fibMin = 0;
+      } else if (density < 0.4) {
+        // Média densidade
+        primeMin = avgPrimes !== undefined ? Math.max(0, Math.floor(avgPrimes) - 1) : staticRec.primes.min;
+        primeMax = avgPrimes !== undefined ? Math.ceil(avgPrimes) + 1 : staticRec.primes.max;
+        edgeMin = avgEdges !== undefined ? Math.max(0, Math.floor(avgEdges) - 1) : staticRec.edges.min;
+        edgeMax = avgEdges !== undefined ? Math.ceil(avgEdges) + 2 : staticRec.edges.max;
+        fibMin = avgFib !== undefined ? Math.max(0, Math.floor(avgFib) - 1) : staticRec.fibonacci.min;
+      } else {
+        // Alta densidade
+        const hPrimes = extendedAnalysis.primeDistributionStats?.recommendedRange || [staticRec.primes.min, staticRec.primes.max];
+        primeMin = Math.floor(hPrimes[0] * scaleRatio);
+        primeMax = Math.ceil(hPrimes[1] * scaleRatio) + 2;
+        const hEdges = extendedAnalysis.edgeNumberStats?.recommendedRange || [staticRec.edges.min, staticRec.edges.max];
+        edgeMin = Math.floor(hEdges[0] * scaleRatio);
+        edgeMax = Math.ceil(hEdges[1] * scaleRatio) + 2;
+        fibMin = avgFib !== undefined ? Math.floor(avgFib * scaleRatio) : staticRec.fibonacci.min;
+      }
+      
+      decadeMin = avgDecades !== undefined ? Math.floor(avgDecades) : staticRec.decades.min;
+      spreadMin = avgSpread !== undefined ? Math.max(0.5, avgSpread / scaleRatio) : staticRec.spread.min;
+      
+      sumMin = Math.floor(sumAvgHist * scaleRatio * 0.75);
+      sumMax = Math.ceil(sumAvgHist * scaleRatio * 1.25);
+      
+      finalConsecutive = isHighDensity ? safeConsecutive : Math.max(2, Math.ceil(avgConsecutive) + 2);
+      
+      minRep = Math.max(0, Math.floor(avgRepeats * scaleRatio) - 2);
+      maxRep = Math.ceil(avgRepeats * scaleRatio) + 3;
+      
+      safeDelay = Math.max(3, Math.floor(avgDelay * 0.8));
+    }
 
     return {
       hasAnalysis: true,
       sum: [sumMin, sumMax],
-      consecutive: finalConsecutive, // Use calculated safe value
+      consecutive: finalConsecutive,
       delay: safeDelay > 2 ? safeDelay : 5, 
       repeat: [minRep, maxRep],
       
@@ -171,10 +320,10 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
       fibonacci: { min: fibMin }, 
       
       hints: {
-        sum: `Histórico (Ajustado): ~${sumAvgScaled.toFixed(0)}`,
+        sum: `Histórico: ~${sumAvgHist.toFixed(0)}`,
         consecutive: `Padrão: Máx ${finalConsecutive}`,
         delay: `Histórico: média ${avgDelay.toFixed(1)} concursos`,
-        repeat: `Histórico (Ajustado): ~${avgRepeatsScaled.toFixed(1)}`,
+        repeat: `Histórico: ~${avgRepeats.toFixed(1)}`,
         cycle: `Faltam ${extendedAnalysis.cycleStats?.missingNumbers.length || '?'} números no ciclo atual`
       }
     };
@@ -194,6 +343,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
         return `Histórico: ${extendedAnalysis.edgeNumberStats?.avgEdgesPerGame?.toFixed(1) || '?'} bordas/jogo. ${baseHint}`;
       case 'spread':
         return `Histórico: gap médio ${extendedAnalysis.spreadStats?.avgSpread?.toFixed(1) || '?'}. ${baseHint}`;
+      case 'fibonacci':
+        return `Histórico: ${extendedAnalysis.fibonacciStats?.avgFibonacciPerGame?.toFixed(1) || '?'} fibonacci/jogo. ${baseHint}`;
       default:
         return baseHint;
     }
@@ -868,11 +1019,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <span className="text-sm font-medium text-gray-700">🔢 Primos Balanceados</span>
                   {config.usePrimeCountFilter && <span className="text-xs text-green-600">✓ Ativo</span>}
                 </label>
-                <div className={clsx("flex gap-2", !config.usePrimeCountFilter && "opacity-50 pointer-events-none")}>
+                <div className={clsx("flex gap-2", !config.usePrimeCountFilter && "opacity-50")}>
                   <input
                     type="number"
                     placeholder="Min"
                     min="0"
+                    max={lottery.gameSize}
                     value={config.minPrimes ?? statDefaults.primes.min}
                     onChange={(e) => setNumber("minPrimes", parseInt(e.target.value) || 0)}
                     className="w-full text-sm border rounded px-2 py-1"
@@ -881,6 +1033,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     type="number"
                     placeholder="Max"
                     min="0"
+                    max={lottery.gameSize}
                     value={config.maxPrimes ?? statDefaults.primes.max}
                     onChange={(e) => setNumber("maxPrimes", parseInt(e.target.value) || 10)}
                     className="w-full text-sm border rounded px-2 py-1"
@@ -937,11 +1090,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <span className="text-sm font-medium text-gray-700">↔️ Números de Borda</span>
                   {config.useEdgeFilter && <span className="text-xs text-green-600">✓ Ativo</span>}
                 </label>
-                <div className={clsx("flex gap-2", !config.useEdgeFilter && "opacity-50 pointer-events-none")}>
+                <div className={clsx("flex gap-2", !config.useEdgeFilter && "opacity-50")}>
                   <input
                     type="number"
                     placeholder="Min"
                     min="0"
+                    max={lottery.gameSize}
                     value={config.minEdgeNumbers ?? statDefaults.edges.min}
                     onChange={(e) => setNumber("minEdgeNumbers", parseInt(e.target.value) || 0)}
                     className="w-full text-sm border rounded px-2 py-1"
@@ -950,6 +1104,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     type="number"
                     placeholder="Max"
                     min="0"
+                    max={lottery.gameSize}
                     value={config.maxEdgeNumbers ?? statDefaults.edges.max}
                     onChange={(e) => setNumber("maxEdgeNumbers", parseInt(e.target.value) || 10)}
                     className="w-full text-sm border rounded px-2 py-1"
