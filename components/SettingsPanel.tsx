@@ -1166,7 +1166,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   min="0"
                   max={staticRec.fibonacci.available}
                   value={config.minFibonacciNumbers ?? statDefaults.fibonacci.min}
-                  onChange={(e) => setNumber("minFibonacciNumbers", parseInt(e.target.value) || 1)}
+                  onChange={(e) => setNumber("minFibonacciNumbers", parseInt(e.target.value) || 0)}
                   className={clsx("w-full text-sm border rounded px-2 py-1", !config.useFibonacciFilter && "opacity-50")}
                   disabled={!config.useFibonacciFilter}
                 />
